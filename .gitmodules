@@ -1,0 +1,3 @@
+[submodule "third_party/tinydtls"]
+	path = third_party/tinydtls
+	url = https://github.com/eclipse/tinydtls.git
