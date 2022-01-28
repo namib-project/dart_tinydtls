@@ -13,3 +13,14 @@ environment:
 dev_dependencies:
   lints: ^1.0.0
   test: ^1.16.0
+  ffigen: ^4.1.2
+
+ffigen:
+  name: TinyDTLS
+  description: ffi binding to the tinydtls library.
+  output: 'lib/src/ffi/generated_bindings.dart'
+  headers:
+    entry-points:
+      - 'third_party/tinydtls/tinydtls.h'
+      - 'third_party/tinydtls/dtls.h'
+      - 'third_party/tinydtls/dtls_config.h'
