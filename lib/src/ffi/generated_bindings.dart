@@ -393,6 +393,24 @@ class TinyDTLS {
               ffi.Pointer<dtls_peer_t>)>>('dtls_reset_peer');
   late final _dtls_reset_peer = _dtls_reset_peerPtr.asFunction<
       void Function(ffi.Pointer<dtls_context_t>, ffi.Pointer<dtls_peer_t>)>();
+
+  void dtls_set_handler(
+    ffi.Pointer<dtls_context_t> ctx,
+    ffi.Pointer<dtls_handler_t> h,
+  ) {
+    return _dtls_set_handler(
+      ctx,
+      h,
+    );
+  }
+
+  late final _dtls_set_handlerPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Void Function(ffi.Pointer<dtls_context_t>,
+              ffi.Pointer<dtls_handler_t>)>>('dtls_set_handler_helper');
+  late final _dtls_set_handler = _dtls_set_handlerPtr.asFunction<
+      void Function(
+          ffi.Pointer<dtls_context_t>, ffi.Pointer<dtls_handler_t>)>();
 }
 
 class session_t extends ffi.Struct {
@@ -915,7 +933,18 @@ class dtls_client_hello_t extends ffi.Struct {
 }
 
 /// Structure of the Hello Verify Request.
-class dtls_hello_verify_t extends ffi.Opaque {}
+@ffi.Packed(1)
+class dtls_hello_verify_t extends ffi.Struct {
+  @ffi.Array.multi([2])
+  external ffi.Array<ffi.Uint8> version;
+
+  /// < Length of the included cookie
+  @uint8()
+  external int cookie_length;
+
+  @ffi.Array.multi([32])
+  external ffi.Array<uint8> cookie;
+}
 
 const int WITH_POSIX = 1;
 
@@ -928,8 +957,6 @@ const int HAVE_ARPA_INET_H = 1;
 const int HAVE_ASSERT_H = 1;
 
 const int HAVE_FCNTL_H = 1;
-
-const int HAVE_GETRANDOM = 1;
 
 const int HAVE_INTTYPES_H = 1;
 
@@ -985,7 +1012,7 @@ const String PACKAGE_STRING = 'tinydtls 0.8.6';
 
 const String PACKAGE_TARNAME = 'tinydtls';
 
-const String PACKAGE_URL = 'https://projects.eclipse.org/projects/iot.tinydtls';
+const String PACKAGE_URL = '';
 
 const String PACKAGE_VERSION = '0.8.6';
 
