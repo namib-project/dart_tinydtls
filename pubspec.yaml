@@ -1,15 +1,84 @@
-name: dart_tindydtls
+name: dart_tinydtls
 description: Dart ffi bindings to the tinydtls library.
 version: 0.1.0
-# homepage: https://www.example.com
+# homepage: https://namib.me
 
 environment:
-  sdk: '>=2.15.1 <3.0.0'
-
-
-# dependencies:
-#   path: ^1.8.0
+  sdk: '>=2.14.4 <3.0.0'
 
 dev_dependencies:
   lints: ^1.0.0
   test: ^1.16.0
+  ffigen: ^4.1.2
+
+ffigen:
+  name: TinyDTLS
+  description: ffi binding to the tinydtls library.
+  output: 'lib/src/ffi/generated_bindings.dart'
+  # NOTE: This directory may be different depending on your system.
+  compiler-opts: '-I/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/include -I./third_party/tinydtls'
+  headers:
+    entry-points:
+      - 'third_party/helper.c'
+    include-directives:
+      - '**dtls.h'
+      - '**dtls_config.h'
+      - '**session.h'
+      - '**helper.c'
+  preamble: |
+    // ignore_for_file: camel_case_types, non_constant_identifier_names, constant_identifier_names
+  # The following is roughly based on Rust library `tinydtls-sys`'s inclusions.
+  functions:
+    include:
+      - "dtls_.*"
+      - ".*_helper"
+      - "DTLS_.*"
+      - "memxor"
+      - "equals"
+      - "WITH_.*"
+      - "PACKAGE_.*"
+      - "netq_.*"
+      - "NETQ_.*"
+    exclude:
+      - "dtls_set_handler"
+    rename:
+      "(.+)_helper": "$1"
+  structs:
+    include:
+      - "dtls_.*"
+      - "DTLS_.*"
+      - "seqnum_t"
+      - "__attribute__"
+      - "clock_time_t"
+      - "WITH_.*"
+      - "PACKAGE_.*"
+      - "netq_.*"
+      - "NETQ_.*"
+      - "session_t"
+    exclude:
+      - "dtls_hello_verify_t"
+    rename:
+      "(.+)_helper": "$1"
+    enums:
+      include:
+        - "dtls_.*"
+        - "DTLS_.*"
+        - "seqnum_t"
+        - "__attribute__"
+        - "clock_time_t"
+        - "WITH_.*"
+        - "PACKAGE_.*"
+        - "netq_.*"
+        - "NETQ_.*"
+        - "session_t"
+    vars:
+      include:
+        - "dtls_.*"
+        - "DTLS_.*"
+        - "CLOCK_SECOND"
+        - "TLS_.*"
+        - "DTLSv12"
+        - "WITH_.*"
+        - "PACKAGE_.*"
+        - "netq_.*"
+        - "NETQ_.*"
