@@ -16,13 +16,6 @@ Dart ffi bindings to the tinydtls library.
     2. `Generated declaration '__socklen_t' start's with '_' and therefore will be private.`
         - Similarly, it won't cause any problems for `__socklen_t` to be private.
 
-In `helper.c`, two "overrides" are defined for C members which would otherwise cause problems:
-- `dtls_set_handler` is an inline function, which `ffigen` doesn't support.
-  - The function is rewritten as a "normal" C function.
-- `dtls_hello_verify_t` contains bit field members, which `ffigen` doesn't support.
-    - The members are rewritten as "normal" unsigned integers. 
-      Callers need to make sure to still respect the original bit field boundary!
-
 ## License
 
 Matching the license of the tinydtls C library, this library is made available both under

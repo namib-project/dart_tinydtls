@@ -23,12 +23,11 @@ ffigen:
   compiler-opts: '-I/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/include -I./third_party/tinydtls'
   headers:
     entry-points:
-      - 'third_party/helper.c'
+      - 'third_party/tinydtls/dtls.h'
     include-directives:
       - '**dtls.h'
       - '**dtls_config.h'
       - '**session.h'
-      - '**helper.c'
       - '**state.h'
       - '**alert.h'
       - '**crypto.h'
@@ -40,7 +39,6 @@ ffigen:
   functions:
     include:
       - "dtls_.*"
-      - ".*_helper"
       - "DTLS_.*"
       - "memxor"
       - "equals"
@@ -50,8 +48,6 @@ ffigen:
       - "NETQ_.*"
     exclude:
       - "dtls_set_handler"
-    rename:
-      "(.+)_helper": "$1"
   structs:
     include:
       - "dtls_.*"
@@ -66,8 +62,6 @@ ffigen:
       - "session_t"
     exclude:
       - "dtls_hello_verify_t"
-    rename:
-      "(.+)_helper": "$1"
     enums:
       include:
         - "dtls_.*"
