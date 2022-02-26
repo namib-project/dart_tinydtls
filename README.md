@@ -11,7 +11,7 @@ Dart ffi bindings to the tinydtls library.
      location of corresponding header files for `stddef.h` and so on.
 3. There are exactly two warnings which can be ignored:
     1. `Removed All Struct Members from dtls_handshake_parameters_t(dtls_handshake_parameters_t), Bit Field members not supported.`
-       - The struct `dtls_handshake_parameters_t` won't be used by library clients, so the 
+       - The struct `dtls_handshake_parameters_t` won't be used by library clients, so the
          fact that it's opaque in the bindings can safely be ignored.
     2. `Generated declaration '__socklen_t' start's with '_' and therefore will be private.`
         - Similarly, it won't cause any problems for `__socklen_t` to be private.
