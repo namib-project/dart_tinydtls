@@ -1,4 +1,4 @@
-import 'package:dart_tinydtls/dart_tindydtls.dart';
+import 'package:dart_tinydtls/dart_tinydtls.dart';
 import 'package:test/test.dart';
 
 void main() {
