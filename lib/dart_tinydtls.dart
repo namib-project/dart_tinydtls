@@ -6,7 +6,7 @@
 /// Dart ffi bindings to the tinydtls library.
 ///
 /// Provides a DTLS client with PSK and ECC support.
-library dart_tindydtls;
+library dart_tinydtls;
 
 export 'src/client.dart' show DtlsClient, PskCredentials, DtlsConnection;
 export 'src/ecdsa_keys.dart';

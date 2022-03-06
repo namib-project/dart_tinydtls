@@ -7,7 +7,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:dart_tinydtls/dart_tindydtls.dart';
+import 'package:dart_tinydtls/dart_tinydtls.dart';
 
 EcdsaKeys _getKeys() {
   final privateKey = Uint8List.fromList(privateKeyList);
