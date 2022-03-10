@@ -610,6 +610,8 @@ Pointer<dtls_ecdsa_key_t> _ecdsaKeysToPointer(EcdsaKeys ecdsaKeys) {
     case EcdsaCurve.dtlsEcdhCurveSecp256R1:
       structReference.curve = dtls_ecdh_curve.DTLS_ECDH_CURVE_SECP256R1;
       break;
+    default:
+      throw ArgumentError("Unknown Cipher ${ecdsaKeys.ecdsaCurve} found.");
   }
   structReference.priv_key
       .asTypedList(DTLS_EC_KEY_SIZE)
