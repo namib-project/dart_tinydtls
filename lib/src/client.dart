@@ -497,6 +497,10 @@ class DtlsClient {
       {PskCredentials? pskCredentials,
       EcdsaKeys? ecdsaKeys,
       void Function(DtlsEvent event)? eventListener}) async {
+    if (pskCredentials == null && ecdsaKeys == null) {
+      throw ArgumentError("No DTLS client credentials have been provided.");
+    }
+
     final key = "${address.host}:$port";
     final existingConnection = _connections[key];
     if (existingConnection != null) {
