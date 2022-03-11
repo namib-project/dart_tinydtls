@@ -19,5 +19,14 @@ void main() {
       final client = await DtlsClient.bind(InternetAddress.anyIPv6, 0);
       client.close();
     });
+
+    /// Asserts that a user has to provide client credentials in order to
+    /// connect.
+    test('Connect Credentials Test', () async {
+      final client = await DtlsClient.bind(InternetAddress.anyIPv6, 0);
+      expect(client.connect(InternetAddress.anyIPv6, 5684),
+          throwsA(TypeMatcher<ArgumentError>()));
+      client.close();
+    });
   });
 }
