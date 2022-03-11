@@ -124,6 +124,759 @@ class TinyDTLS {
   late final _dtls_session_equals = _dtls_session_equalsPtr.asFunction<
       int Function(ffi.Pointer<session_t>, ffi.Pointer<session_t>)>();
 
+  /// Expands the secret and key to a block of DTLS_HMAC_MAX
+  /// size according to the algorithm specified in section 5 of
+  /// RFC 4346.
+  ///
+  /// \param h       Identifier of the hash function to use.
+  /// \param key     The secret.
+  /// \param keylen  Length of \p key.
+  /// \param seed    The seed.
+  /// \param seedlen Length of \p seed.
+  /// \param buf     Output buffer where the result is XORed into
+  /// The buffe must be capable to hold at least
+  /// \p buflen bytes.
+  /// \return The actual number of bytes written to \p buf or 0
+  /// on error.
+  int dtls_p_hash(
+    int h,
+    ffi.Pointer<ffi.Uint8> key,
+    int keylen,
+    ffi.Pointer<ffi.Uint8> label,
+    int labellen,
+    ffi.Pointer<ffi.Uint8> random1,
+    int random1len,
+    ffi.Pointer<ffi.Uint8> random2,
+    int random2len,
+    ffi.Pointer<ffi.Uint8> buf,
+    int buflen,
+  ) {
+    return _dtls_p_hash(
+      h,
+      key,
+      keylen,
+      label,
+      labellen,
+      random1,
+      random1len,
+      random2,
+      random2len,
+      buf,
+      buflen,
+    );
+  }
+
+  late final _dtls_p_hashPtr = _lookup<
+      ffi.NativeFunction<
+          size_t Function(
+              ffi.Int32,
+              ffi.Pointer<ffi.Uint8>,
+              size_t,
+              ffi.Pointer<ffi.Uint8>,
+              size_t,
+              ffi.Pointer<ffi.Uint8>,
+              size_t,
+              ffi.Pointer<ffi.Uint8>,
+              size_t,
+              ffi.Pointer<ffi.Uint8>,
+              size_t)>>('dtls_p_hash');
+  late final _dtls_p_hash = _dtls_p_hashPtr.asFunction<
+      int Function(
+          int,
+          ffi.Pointer<ffi.Uint8>,
+          int,
+          ffi.Pointer<ffi.Uint8>,
+          int,
+          ffi.Pointer<ffi.Uint8>,
+          int,
+          ffi.Pointer<ffi.Uint8>,
+          int,
+          ffi.Pointer<ffi.Uint8>,
+          int)>();
+
+  /// This function implements the TLS PRF for DTLS_VERSION. For version
+  /// 1.0, the PRF is P_MD5 ^ P_SHA1 while version 1.2 uses
+  /// P_SHA256. Currently, the actual PRF is selected at compile time.
+  int dtls_prf(
+    ffi.Pointer<ffi.Uint8> key,
+    int keylen,
+    ffi.Pointer<ffi.Uint8> label,
+    int labellen,
+    ffi.Pointer<ffi.Uint8> random1,
+    int random1len,
+    ffi.Pointer<ffi.Uint8> random2,
+    int random2len,
+    ffi.Pointer<ffi.Uint8> buf,
+    int buflen,
+  ) {
+    return _dtls_prf(
+      key,
+      keylen,
+      label,
+      labellen,
+      random1,
+      random1len,
+      random2,
+      random2len,
+      buf,
+      buflen,
+    );
+  }
+
+  late final _dtls_prfPtr = _lookup<
+      ffi.NativeFunction<
+          size_t Function(
+              ffi.Pointer<ffi.Uint8>,
+              size_t,
+              ffi.Pointer<ffi.Uint8>,
+              size_t,
+              ffi.Pointer<ffi.Uint8>,
+              size_t,
+              ffi.Pointer<ffi.Uint8>,
+              size_t,
+              ffi.Pointer<ffi.Uint8>,
+              size_t)>>('dtls_prf');
+  late final _dtls_prf = _dtls_prfPtr.asFunction<
+      int Function(
+          ffi.Pointer<ffi.Uint8>,
+          int,
+          ffi.Pointer<ffi.Uint8>,
+          int,
+          ffi.Pointer<ffi.Uint8>,
+          int,
+          ffi.Pointer<ffi.Uint8>,
+          int,
+          ffi.Pointer<ffi.Uint8>,
+          int)>();
+
+  /// Calculates MAC for record + cleartext packet and places the result
+  /// in \p buf. The given \p hmac_ctx must be initialized with the HMAC
+  /// function to use and the proper secret. As the DTLS mac calculation
+  /// requires data from the record header, \p record must point to a
+  /// buffer of at least \c sizeof(dtls_record_header_t) bytes. Usually,
+  /// the remaining packet will be encrypted, therefore, the cleartext
+  /// is passed separately in \p packet.
+  ///
+  /// \param hmac_ctx  The HMAC context to use for MAC calculation.
+  /// \param record    The record header.
+  /// \param packet    Cleartext payload to apply the MAC to.
+  /// \param length    Size of \p packet.
+  /// \param buf       A result buffer that is large enough to hold
+  /// the generated digest.
+  void dtls_mac(
+    ffi.Pointer<dtls_hmac_context_t> hmac_ctx,
+    ffi.Pointer<ffi.Uint8> record,
+    ffi.Pointer<ffi.Uint8> packet,
+    int length,
+    ffi.Pointer<ffi.Uint8> buf,
+  ) {
+    return _dtls_mac(
+      hmac_ctx,
+      record,
+      packet,
+      length,
+      buf,
+    );
+  }
+
+  late final _dtls_macPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Void Function(
+              ffi.Pointer<dtls_hmac_context_t>,
+              ffi.Pointer<ffi.Uint8>,
+              ffi.Pointer<ffi.Uint8>,
+              size_t,
+              ffi.Pointer<ffi.Uint8>)>>('dtls_mac');
+  late final _dtls_mac = _dtls_macPtr.asFunction<
+      void Function(ffi.Pointer<dtls_hmac_context_t>, ffi.Pointer<ffi.Uint8>,
+          ffi.Pointer<ffi.Uint8>, int, ffi.Pointer<ffi.Uint8>)>();
+
+  /// Encrypts the specified \p src of given \p length, writing the
+  /// result to \p buf. The cipher implementation may add more data to
+  /// the result buffer such as an initialization vector or padding
+  /// (e.g. for block ciphers in CBC mode). The caller therefore must
+  /// ensure that \p buf provides sufficient storage to hold the result.
+  /// Usually this means ( 2 + \p length / blocksize ) * blocksize.  The
+  /// function returns a value less than zero on error or otherwise the
+  /// number of bytes written. The provided \p src and \p buf may overlap.
+  ///
+  /// \param params AEAD parameters: Nonce, M and L.
+  /// \param src    The data to encrypt.
+  /// \param length The actual size of of \p src.
+  /// \param buf    The result buffer.
+  /// \param aad    additional data for AEAD ciphers
+  /// \param aad_length actual size of @p aad
+  /// \return The number of encrypted bytes on success, less than zero
+  /// otherwise.
+  int dtls_encrypt_params(
+    ffi.Pointer<dtls_ccm_params_t> params,
+    ffi.Pointer<ffi.Uint8> src,
+    int length,
+    ffi.Pointer<ffi.Uint8> buf,
+    ffi.Pointer<ffi.Uint8> key,
+    int keylen,
+    ffi.Pointer<ffi.Uint8> aad,
+    int aad_length,
+  ) {
+    return _dtls_encrypt_params(
+      params,
+      src,
+      length,
+      buf,
+      key,
+      keylen,
+      aad,
+      aad_length,
+    );
+  }
+
+  late final _dtls_encrypt_paramsPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Int32 Function(
+              ffi.Pointer<dtls_ccm_params_t>,
+              ffi.Pointer<ffi.Uint8>,
+              size_t,
+              ffi.Pointer<ffi.Uint8>,
+              ffi.Pointer<ffi.Uint8>,
+              size_t,
+              ffi.Pointer<ffi.Uint8>,
+              size_t)>>('dtls_encrypt_params');
+  late final _dtls_encrypt_params = _dtls_encrypt_paramsPtr.asFunction<
+      int Function(
+          ffi.Pointer<dtls_ccm_params_t>,
+          ffi.Pointer<ffi.Uint8>,
+          int,
+          ffi.Pointer<ffi.Uint8>,
+          ffi.Pointer<ffi.Uint8>,
+          int,
+          ffi.Pointer<ffi.Uint8>,
+          int)>();
+
+  /// Encrypts the specified \p src of given \p length, writing the
+  /// result to \p buf. The cipher implementation may add more data to
+  /// the result buffer such as an initialization vector or padding
+  /// (e.g. for block ciphers in CBC mode). The caller therefore must
+  /// ensure that \p buf provides sufficient storage to hold the result.
+  /// Usually this means ( 2 + \p length / blocksize ) * blocksize.  The
+  /// function returns a value less than zero on error or otherwise the
+  /// number of bytes written. The provided \p src and \p buf may overlap.
+  ///
+  /// \param src    The data to encrypt.
+  /// \param length The actual size of of \p src.
+  /// \param buf    The result buffer.
+  /// \param nonce  The nonce used for encryption. Must be exactly 13
+  /// bytes, because L is set to 2.
+  /// \param aad    additional data for AEAD ciphers
+  /// \param aad_length actual size of @p aad
+  /// \return The number of encrypted bytes on success, less than zero
+  /// otherwise.
+  ///
+  /// \deprecated dtls_encrypt() always sets M=8, L=2. Use
+  /// dtls_encrypt_params() instead.
+  int dtls_encrypt(
+    ffi.Pointer<ffi.Uint8> src,
+    int length,
+    ffi.Pointer<ffi.Uint8> buf,
+    ffi.Pointer<ffi.Uint8> nonce,
+    ffi.Pointer<ffi.Uint8> key,
+    int keylen,
+    ffi.Pointer<ffi.Uint8> aad,
+    int aad_length,
+  ) {
+    return _dtls_encrypt(
+      src,
+      length,
+      buf,
+      nonce,
+      key,
+      keylen,
+      aad,
+      aad_length,
+    );
+  }
+
+  late final _dtls_encryptPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Int32 Function(
+              ffi.Pointer<ffi.Uint8>,
+              size_t,
+              ffi.Pointer<ffi.Uint8>,
+              ffi.Pointer<ffi.Uint8>,
+              ffi.Pointer<ffi.Uint8>,
+              size_t,
+              ffi.Pointer<ffi.Uint8>,
+              size_t)>>('dtls_encrypt');
+  late final _dtls_encrypt = _dtls_encryptPtr.asFunction<
+      int Function(
+          ffi.Pointer<ffi.Uint8>,
+          int,
+          ffi.Pointer<ffi.Uint8>,
+          ffi.Pointer<ffi.Uint8>,
+          ffi.Pointer<ffi.Uint8>,
+          int,
+          ffi.Pointer<ffi.Uint8>,
+          int)>();
+
+  /// Decrypts the given buffer \p src of given \p length, writing the
+  /// result to \p buf. The function returns \c -1 in case of an error,
+  /// or the number of bytes written. Note that for block ciphers, \p
+  /// length must be a multiple of the cipher's block size. A return
+  /// value between \c 0 and the actual length indicates that only \c n-1
+  /// block have been processed. The provided \p src and \p buf may overlap.
+  ///
+  /// \param params AEAD parameters: Nonce, M and L.
+  /// \param src     The buffer to decrypt.
+  /// \param length  The length of the input buffer.
+  /// \param buf     The result buffer.
+  /// \param aad     additional authentication data for AEAD ciphers
+  /// \param aad_length actual size of @p aad
+  /// \return Less than zero on error, the number of decrypted bytes
+  /// otherwise.
+  int dtls_decrypt_params(
+    ffi.Pointer<dtls_ccm_params_t> params,
+    ffi.Pointer<ffi.Uint8> src,
+    int length,
+    ffi.Pointer<ffi.Uint8> buf,
+    ffi.Pointer<ffi.Uint8> key,
+    int keylen,
+    ffi.Pointer<ffi.Uint8> aad,
+    int aad_length,
+  ) {
+    return _dtls_decrypt_params(
+      params,
+      src,
+      length,
+      buf,
+      key,
+      keylen,
+      aad,
+      aad_length,
+    );
+  }
+
+  late final _dtls_decrypt_paramsPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Int32 Function(
+              ffi.Pointer<dtls_ccm_params_t>,
+              ffi.Pointer<ffi.Uint8>,
+              size_t,
+              ffi.Pointer<ffi.Uint8>,
+              ffi.Pointer<ffi.Uint8>,
+              size_t,
+              ffi.Pointer<ffi.Uint8>,
+              size_t)>>('dtls_decrypt_params');
+  late final _dtls_decrypt_params = _dtls_decrypt_paramsPtr.asFunction<
+      int Function(
+          ffi.Pointer<dtls_ccm_params_t>,
+          ffi.Pointer<ffi.Uint8>,
+          int,
+          ffi.Pointer<ffi.Uint8>,
+          ffi.Pointer<ffi.Uint8>,
+          int,
+          ffi.Pointer<ffi.Uint8>,
+          int)>();
+
+  /// Decrypts the given buffer \p src of given \p length, writing the
+  /// result to \p buf. The function returns \c -1 in case of an error,
+  /// or the number of bytes written. Note that for block ciphers, \p
+  /// length must be a multiple of the cipher's block size. A return
+  /// value between \c 0 and the actual length indicates that only \c n-1
+  /// block have been processed. The provided \p src and \p buf may overlap.
+  ///
+  /// \param src     The buffer to decrypt.
+  /// \param length  The length of the input buffer.
+  /// \param buf     The result buffer.
+  /// \param nonce  The nonce used for encryption. Must be exactly 13
+  /// bytes, because L is set to 2.
+  /// \param aad     additional authentication data for AEAD ciphers
+  /// \param aad_length actual size of @p aad
+  /// \return Less than zero on error, the number of decrypted bytes
+  /// otherwise.
+  ///
+  /// \deprecated dtls_decrypt() always sets M=8, L=2. Use
+  /// dtls_decrypt_params() instead.
+  int dtls_decrypt(
+    ffi.Pointer<ffi.Uint8> src,
+    int length,
+    ffi.Pointer<ffi.Uint8> buf,
+    ffi.Pointer<ffi.Uint8> nonce,
+    ffi.Pointer<ffi.Uint8> key,
+    int keylen,
+    ffi.Pointer<ffi.Uint8> a_data,
+    int a_data_length,
+  ) {
+    return _dtls_decrypt(
+      src,
+      length,
+      buf,
+      nonce,
+      key,
+      keylen,
+      a_data,
+      a_data_length,
+    );
+  }
+
+  late final _dtls_decryptPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Int32 Function(
+              ffi.Pointer<ffi.Uint8>,
+              size_t,
+              ffi.Pointer<ffi.Uint8>,
+              ffi.Pointer<ffi.Uint8>,
+              ffi.Pointer<ffi.Uint8>,
+              size_t,
+              ffi.Pointer<ffi.Uint8>,
+              size_t)>>('dtls_decrypt');
+  late final _dtls_decrypt = _dtls_decryptPtr.asFunction<
+      int Function(
+          ffi.Pointer<ffi.Uint8>,
+          int,
+          ffi.Pointer<ffi.Uint8>,
+          ffi.Pointer<ffi.Uint8>,
+          ffi.Pointer<ffi.Uint8>,
+          int,
+          ffi.Pointer<ffi.Uint8>,
+          int)>();
+
+  /// Generates pre_master_sercet from given PSK and fills the result
+  /// according to the "plain PSK" case in section 2 of RFC 4279.
+  /// Diffie-Hellman and RSA key exchange are currently not supported.
+  ///
+  /// @param key    The shared key.
+  /// @param keylen Length of @p key in bytes.
+  /// @param result The derived pre master secret.
+  /// @return The actual length of @p result.
+  int dtls_psk_pre_master_secret(
+    ffi.Pointer<ffi.Uint8> key,
+    int keylen,
+    ffi.Pointer<ffi.Uint8> result,
+    int result_len,
+  ) {
+    return _dtls_psk_pre_master_secret(
+      key,
+      keylen,
+      result,
+      result_len,
+    );
+  }
+
+  late final _dtls_psk_pre_master_secretPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Int32 Function(ffi.Pointer<ffi.Uint8>, size_t,
+              ffi.Pointer<ffi.Uint8>, size_t)>>('dtls_psk_pre_master_secret');
+  late final _dtls_psk_pre_master_secret =
+      _dtls_psk_pre_master_secretPtr.asFunction<
+          int Function(
+              ffi.Pointer<ffi.Uint8>, int, ffi.Pointer<ffi.Uint8>, int)>();
+
+  int dtls_ecdh_pre_master_secret(
+    ffi.Pointer<ffi.Uint8> priv_key,
+    ffi.Pointer<ffi.Uint8> pub_key_x,
+    ffi.Pointer<ffi.Uint8> pub_key_y,
+    int key_size,
+    ffi.Pointer<ffi.Uint8> result,
+    int result_len,
+  ) {
+    return _dtls_ecdh_pre_master_secret(
+      priv_key,
+      pub_key_x,
+      pub_key_y,
+      key_size,
+      result,
+      result_len,
+    );
+  }
+
+  late final _dtls_ecdh_pre_master_secretPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Int32 Function(
+              ffi.Pointer<ffi.Uint8>,
+              ffi.Pointer<ffi.Uint8>,
+              ffi.Pointer<ffi.Uint8>,
+              size_t,
+              ffi.Pointer<ffi.Uint8>,
+              size_t)>>('dtls_ecdh_pre_master_secret');
+  late final _dtls_ecdh_pre_master_secret =
+      _dtls_ecdh_pre_master_secretPtr.asFunction<
+          int Function(ffi.Pointer<ffi.Uint8>, ffi.Pointer<ffi.Uint8>,
+              ffi.Pointer<ffi.Uint8>, int, ffi.Pointer<ffi.Uint8>, int)>();
+
+  void dtls_ecdsa_generate_key(
+    ffi.Pointer<ffi.Uint8> priv_key,
+    ffi.Pointer<ffi.Uint8> pub_key_x,
+    ffi.Pointer<ffi.Uint8> pub_key_y,
+    int key_size,
+  ) {
+    return _dtls_ecdsa_generate_key(
+      priv_key,
+      pub_key_x,
+      pub_key_y,
+      key_size,
+    );
+  }
+
+  late final _dtls_ecdsa_generate_keyPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Void Function(ffi.Pointer<ffi.Uint8>, ffi.Pointer<ffi.Uint8>,
+              ffi.Pointer<ffi.Uint8>, size_t)>>('dtls_ecdsa_generate_key');
+  late final _dtls_ecdsa_generate_key = _dtls_ecdsa_generate_keyPtr.asFunction<
+      void Function(ffi.Pointer<ffi.Uint8>, ffi.Pointer<ffi.Uint8>,
+          ffi.Pointer<ffi.Uint8>, int)>();
+
+  void dtls_ecdsa_create_sig_hash(
+    ffi.Pointer<ffi.Uint8> priv_key,
+    int key_size,
+    ffi.Pointer<ffi.Uint8> sign_hash,
+    int sign_hash_size,
+    ffi.Pointer<ffi.Uint32> point_r,
+    ffi.Pointer<ffi.Uint32> point_s,
+  ) {
+    return _dtls_ecdsa_create_sig_hash(
+      priv_key,
+      key_size,
+      sign_hash,
+      sign_hash_size,
+      point_r,
+      point_s,
+    );
+  }
+
+  late final _dtls_ecdsa_create_sig_hashPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Void Function(
+              ffi.Pointer<ffi.Uint8>,
+              size_t,
+              ffi.Pointer<ffi.Uint8>,
+              size_t,
+              ffi.Pointer<ffi.Uint32>,
+              ffi.Pointer<ffi.Uint32>)>>('dtls_ecdsa_create_sig_hash');
+  late final _dtls_ecdsa_create_sig_hash =
+      _dtls_ecdsa_create_sig_hashPtr.asFunction<
+          void Function(ffi.Pointer<ffi.Uint8>, int, ffi.Pointer<ffi.Uint8>,
+              int, ffi.Pointer<ffi.Uint32>, ffi.Pointer<ffi.Uint32>)>();
+
+  void dtls_ecdsa_create_sig(
+    ffi.Pointer<ffi.Uint8> priv_key,
+    int key_size,
+    ffi.Pointer<ffi.Uint8> client_random,
+    int client_random_size,
+    ffi.Pointer<ffi.Uint8> server_random,
+    int server_random_size,
+    ffi.Pointer<ffi.Uint8> keyx_params,
+    int keyx_params_size,
+    ffi.Pointer<ffi.Uint32> point_r,
+    ffi.Pointer<ffi.Uint32> point_s,
+  ) {
+    return _dtls_ecdsa_create_sig(
+      priv_key,
+      key_size,
+      client_random,
+      client_random_size,
+      server_random,
+      server_random_size,
+      keyx_params,
+      keyx_params_size,
+      point_r,
+      point_s,
+    );
+  }
+
+  late final _dtls_ecdsa_create_sigPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Void Function(
+              ffi.Pointer<ffi.Uint8>,
+              size_t,
+              ffi.Pointer<ffi.Uint8>,
+              size_t,
+              ffi.Pointer<ffi.Uint8>,
+              size_t,
+              ffi.Pointer<ffi.Uint8>,
+              size_t,
+              ffi.Pointer<ffi.Uint32>,
+              ffi.Pointer<ffi.Uint32>)>>('dtls_ecdsa_create_sig');
+  late final _dtls_ecdsa_create_sig = _dtls_ecdsa_create_sigPtr.asFunction<
+      void Function(
+          ffi.Pointer<ffi.Uint8>,
+          int,
+          ffi.Pointer<ffi.Uint8>,
+          int,
+          ffi.Pointer<ffi.Uint8>,
+          int,
+          ffi.Pointer<ffi.Uint8>,
+          int,
+          ffi.Pointer<ffi.Uint32>,
+          ffi.Pointer<ffi.Uint32>)>();
+
+  int dtls_ecdsa_verify_sig_hash(
+    ffi.Pointer<ffi.Uint8> pub_key_x,
+    ffi.Pointer<ffi.Uint8> pub_key_y,
+    int key_size,
+    ffi.Pointer<ffi.Uint8> sign_hash,
+    int sign_hash_size,
+    ffi.Pointer<ffi.Uint8> result_r,
+    ffi.Pointer<ffi.Uint8> result_s,
+  ) {
+    return _dtls_ecdsa_verify_sig_hash(
+      pub_key_x,
+      pub_key_y,
+      key_size,
+      sign_hash,
+      sign_hash_size,
+      result_r,
+      result_s,
+    );
+  }
+
+  late final _dtls_ecdsa_verify_sig_hashPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Int32 Function(
+              ffi.Pointer<ffi.Uint8>,
+              ffi.Pointer<ffi.Uint8>,
+              size_t,
+              ffi.Pointer<ffi.Uint8>,
+              size_t,
+              ffi.Pointer<ffi.Uint8>,
+              ffi.Pointer<ffi.Uint8>)>>('dtls_ecdsa_verify_sig_hash');
+  late final _dtls_ecdsa_verify_sig_hash =
+      _dtls_ecdsa_verify_sig_hashPtr.asFunction<
+          int Function(
+              ffi.Pointer<ffi.Uint8>,
+              ffi.Pointer<ffi.Uint8>,
+              int,
+              ffi.Pointer<ffi.Uint8>,
+              int,
+              ffi.Pointer<ffi.Uint8>,
+              ffi.Pointer<ffi.Uint8>)>();
+
+  int dtls_ecdsa_verify_sig(
+    ffi.Pointer<ffi.Uint8> pub_key_x,
+    ffi.Pointer<ffi.Uint8> pub_key_y,
+    int key_size,
+    ffi.Pointer<ffi.Uint8> client_random,
+    int client_random_size,
+    ffi.Pointer<ffi.Uint8> server_random,
+    int server_random_size,
+    ffi.Pointer<ffi.Uint8> keyx_params,
+    int keyx_params_size,
+    ffi.Pointer<ffi.Uint8> result_r,
+    ffi.Pointer<ffi.Uint8> result_s,
+  ) {
+    return _dtls_ecdsa_verify_sig(
+      pub_key_x,
+      pub_key_y,
+      key_size,
+      client_random,
+      client_random_size,
+      server_random,
+      server_random_size,
+      keyx_params,
+      keyx_params_size,
+      result_r,
+      result_s,
+    );
+  }
+
+  late final _dtls_ecdsa_verify_sigPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Int32 Function(
+              ffi.Pointer<ffi.Uint8>,
+              ffi.Pointer<ffi.Uint8>,
+              size_t,
+              ffi.Pointer<ffi.Uint8>,
+              size_t,
+              ffi.Pointer<ffi.Uint8>,
+              size_t,
+              ffi.Pointer<ffi.Uint8>,
+              size_t,
+              ffi.Pointer<ffi.Uint8>,
+              ffi.Pointer<ffi.Uint8>)>>('dtls_ecdsa_verify_sig');
+  late final _dtls_ecdsa_verify_sig = _dtls_ecdsa_verify_sigPtr.asFunction<
+      int Function(
+          ffi.Pointer<ffi.Uint8>,
+          ffi.Pointer<ffi.Uint8>,
+          int,
+          ffi.Pointer<ffi.Uint8>,
+          int,
+          ffi.Pointer<ffi.Uint8>,
+          int,
+          ffi.Pointer<ffi.Uint8>,
+          int,
+          ffi.Pointer<ffi.Uint8>,
+          ffi.Pointer<ffi.Uint8>)>();
+
+  int dtls_ec_key_asn1_from_uint32(
+    ffi.Pointer<ffi.Uint32> key,
+    int key_size,
+    ffi.Pointer<ffi.Uint8> buf,
+  ) {
+    return _dtls_ec_key_asn1_from_uint32(
+      key,
+      key_size,
+      buf,
+    );
+  }
+
+  late final _dtls_ec_key_asn1_from_uint32Ptr = _lookup<
+      ffi.NativeFunction<
+          ffi.Int32 Function(ffi.Pointer<ffi.Uint32>, size_t,
+              ffi.Pointer<ffi.Uint8>)>>('dtls_ec_key_asn1_from_uint32');
+  late final _dtls_ec_key_asn1_from_uint32 =
+      _dtls_ec_key_asn1_from_uint32Ptr.asFunction<
+          int Function(ffi.Pointer<ffi.Uint32>, int, ffi.Pointer<ffi.Uint8>)>();
+
+  ffi.Pointer<dtls_handshake_parameters_t> dtls_handshake_new() {
+    return _dtls_handshake_new();
+  }
+
+  late final _dtls_handshake_newPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Pointer<dtls_handshake_parameters_t>
+              Function()>>('dtls_handshake_new');
+  late final _dtls_handshake_new = _dtls_handshake_newPtr
+      .asFunction<ffi.Pointer<dtls_handshake_parameters_t> Function()>();
+
+  void dtls_handshake_free(
+    ffi.Pointer<dtls_handshake_parameters_t> handshake,
+  ) {
+    return _dtls_handshake_free(
+      handshake,
+    );
+  }
+
+  late final _dtls_handshake_freePtr = _lookup<
+          ffi.NativeFunction<
+              ffi.Void Function(ffi.Pointer<dtls_handshake_parameters_t>)>>(
+      'dtls_handshake_free');
+  late final _dtls_handshake_free = _dtls_handshake_freePtr
+      .asFunction<void Function(ffi.Pointer<dtls_handshake_parameters_t>)>();
+
+  ffi.Pointer<dtls_security_parameters_t> dtls_security_new() {
+    return _dtls_security_new();
+  }
+
+  late final _dtls_security_newPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Pointer<dtls_security_parameters_t>
+              Function()>>('dtls_security_new');
+  late final _dtls_security_new = _dtls_security_newPtr
+      .asFunction<ffi.Pointer<dtls_security_parameters_t> Function()>();
+
+  void dtls_security_free(
+    ffi.Pointer<dtls_security_parameters_t> security,
+  ) {
+    return _dtls_security_free(
+      security,
+    );
+  }
+
+  late final _dtls_security_freePtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Void Function(
+              ffi.Pointer<dtls_security_parameters_t>)>>('dtls_security_free');
+  late final _dtls_security_free = _dtls_security_freePtr
+      .asFunction<void Function(ffi.Pointer<dtls_security_parameters_t>)>();
+
   /// This function initializes the tinyDTLS memory management and must
   /// be called first.
   void dtls_init() {
@@ -395,25 +1148,64 @@ class TinyDTLS {
               ffi.Pointer<dtls_peer_t>)>>('dtls_reset_peer');
   late final _dtls_reset_peer = _dtls_reset_peerPtr.asFunction<
       void Function(ffi.Pointer<dtls_context_t>, ffi.Pointer<dtls_peer_t>)>();
-
-  void dtls_set_handler(
-    ffi.Pointer<dtls_context_t> ctx,
-    ffi.Pointer<dtls_handler_t> h,
-  ) {
-    return _dtls_set_handler(
-      ctx,
-      h,
-    );
-  }
-
-  late final _dtls_set_handlerPtr = _lookup<
-      ffi.NativeFunction<
-          ffi.Void Function(ffi.Pointer<dtls_context_t>,
-              ffi.Pointer<dtls_handler_t>)>>('dtls_set_handler_helper');
-  late final _dtls_set_handler = _dtls_set_handlerPtr.asFunction<
-      void Function(
-          ffi.Pointer<dtls_context_t>, ffi.Pointer<dtls_handler_t>)>();
 }
+
+abstract class dtls_state_t {
+  static const int DTLS_STATE_INIT = 0;
+  static const int DTLS_STATE_WAIT_CLIENTHELLO = 1;
+  static const int DTLS_STATE_WAIT_CLIENTCERTIFICATE = 2;
+  static const int DTLS_STATE_WAIT_CLIENTKEYEXCHANGE = 3;
+  static const int DTLS_STATE_WAIT_CERTIFICATEVERIFY = 4;
+  static const int DTLS_STATE_WAIT_CHANGECIPHERSPEC = 5;
+  static const int DTLS_STATE_WAIT_FINISHED = 6;
+  static const int DTLS_STATE_FINISHED = 7;
+  static const int DTLS_STATE_CLIENTHELLO = 8;
+  static const int DTLS_STATE_WAIT_SERVERCERTIFICATE = 9;
+  static const int DTLS_STATE_WAIT_SERVERKEYEXCHANGE = 10;
+  static const int DTLS_STATE_WAIT_SERVERHELLODONE = 11;
+  static const int DTLS_STATE_CONNECTED = 12;
+  static const int DTLS_STATE_CLOSING = 13;
+  static const int DTLS_STATE_CLOSED = 14;
+}
+
+class dtls_hs_state_t extends ffi.Struct {
+  /// < send handshake message sequence number counter
+  @ffi.Uint16()
+  external int mseq_s;
+
+  /// < received handshake message sequence number counter
+  @ffi.Uint16()
+  external int mseq_r;
+
+  /// < handshake's current read epoch
+  @ffi.Uint16()
+  external int read_epoch;
+
+  external dtls_hash_ctx hs_hash;
+
+  external dtls_hash_ctx ext_hash;
+}
+
+typedef dtls_hash_ctx = dtls_sha256_ctx;
+typedef dtls_sha256_ctx = _dtls_sha256_ctx;
+
+class _dtls_sha256_ctx extends ffi.Struct {
+  @ffi.Array.multi([8])
+  external ffi.Array<u_int32_t> state;
+
+  @u_int64_t()
+  external int bitcount;
+
+  @ffi.Array.multi([64])
+  external ffi.Array<u_int8_t> buffer;
+}
+
+typedef u_int32_t = __uint32_t;
+typedef __uint32_t = ffi.Uint32;
+typedef u_int64_t = __uint64_t;
+typedef __uint64_t = ffi.Uint64;
+typedef u_int8_t = __uint8_t;
+typedef __uint8_t = ffi.Uint8;
 
 class session_t extends ffi.Struct {
   /// < size of addr
@@ -513,6 +1305,198 @@ class UnnamedUnion2 extends ffi.Union {
   external ffi.Array<ffi.Uint32> __u6_addr32;
 }
 
+abstract class dtls_crypto_alg {
+  static const int AES128 = 0;
+}
+
+abstract class dtls_ecdh_curve {
+  static const int DTLS_ECDH_CURVE_SECP256R1 = 0;
+}
+
+class dtls_cipher_context_t extends ffi.Struct {
+  /// < The crypto context
+  external aes128_ccm_t data;
+}
+
+/// Crypto context for TLS_PSK_WITH_AES_128_CCM_8 cipher suite.
+class aes128_ccm_t extends ffi.Struct {
+  /// < AES-128 encryption context
+  external rijndael_ctx ctx;
+
+  /// < length of MAC tag (=M)
+  @ffi.Uint8()
+  external int tag_length;
+
+  /// < number of bytes in length
+  /// field (= L)
+  @ffi.Uint8()
+  external int l;
+}
+
+class rijndael_ctx extends ffi.Struct {
+  @ffi.Int32()
+  external int Nr;
+
+  @ffi.Array.multi([44])
+  external ffi.Array<aes_u32> ek;
+}
+
+typedef aes_u32 = ffi.Uint32;
+
+class dtls_handshake_parameters_ecdsa_t extends ffi.Struct {
+  @ffi.Array.multi([32])
+  external ffi.Array<uint8> own_eph_priv;
+
+  @ffi.Array.multi([32])
+  external ffi.Array<uint8> other_eph_pub_x;
+
+  @ffi.Array.multi([32])
+  external ffi.Array<uint8> other_eph_pub_y;
+
+  @ffi.Array.multi([32])
+  external ffi.Array<uint8> other_pub_x;
+
+  @ffi.Array.multi([32])
+  external ffi.Array<uint8> other_pub_y;
+}
+
+typedef uint8 = ffi.Uint8;
+
+class dtls_handshake_parameters_psk_t extends ffi.Struct {
+  @ffi.Uint16()
+  external int id_length;
+
+  @ffi.Array.multi([32])
+  external ffi.Array<ffi.Uint8> identity;
+}
+
+class seqnum_t extends ffi.Struct {
+  @ffi.Uint64()
+  external int cseq;
+
+  @ffi.Uint64()
+  external int bitfield;
+}
+
+class dtls_security_parameters_t extends ffi.Struct {
+  /// < compression method
+  @ffi.Int32()
+  external int compression;
+
+  /// < cipher type
+  @ffi.Int32()
+  external int cipher;
+
+  /// < counter for cipher state changes
+  @ffi.Uint16()
+  external int epoch;
+
+  /// < sequence number of last record sent
+  @ffi.Uint64()
+  external int rseq;
+
+  @ffi.Array.multi([40])
+  external ffi.Array<uint8> key_block;
+
+  /// <sequence number of last record received
+  external seqnum_t cseq;
+}
+
+/// Known compression suites.
+abstract class dtls_compression_t {
+  static const int TLS_COMPRESSION_NULL = 0;
+}
+
+/// Known cipher suites.
+abstract class dtls_cipher_t {
+  /// < NULL cipher
+  static const int TLS_NULL_WITH_NULL_NULL = 0;
+
+  /// < see RFC 6655
+  static const int TLS_PSK_WITH_AES_128_CCM_8 = 49320;
+
+  /// < see RFC 7251
+  static const int TLS_ECDHE_ECDSA_WITH_AES_128_CCM_8 = 49326;
+}
+
+class netq_t extends ffi.Opaque {}
+
+class dtls_handshake_parameters_t extends ffi.Opaque {}
+
+typedef size_t = ffi.Uint64;
+
+/// List of known hash functions for use in dtls_hmac_init(). The
+/// identifiers are the same as the HashAlgorithm defined in
+/// <a href="http://tools.ietf.org/html/rfc5246#section-7.4.1.4.1"
+/// >Section 7.4.1.4.1 of RFC 5246</a>.
+abstract class dtls_hashfunc_t {
+  static const int HASH_NONE = 0;
+  static const int HASH_MD5 = 1;
+  static const int HASH_SHA1 = 2;
+  static const int HASH_SHA224 = 3;
+  static const int HASH_SHA256 = 4;
+  static const int HASH_SHA384 = 5;
+  static const int HASH_SHA512 = 6;
+}
+
+/// Context for HMAC generation. This object is initialized with
+/// dtls_hmac_init() and must be passed to dtls_hmac_update() and
+/// dtls_hmac_finalize(). Once, finalized, the component \c H is
+/// invalid and must be initialized again with dtls_hmac_init() before
+/// the structure can be used again.
+class dtls_hmac_context_t extends ffi.Struct {
+  @ffi.Array.multi([64])
+  external ffi.Array<ffi.Uint8> pad;
+
+  /// < context for hash function
+  external dtls_hash_ctx data;
+}
+
+/// Represents AEAD parameters for dtls_encrypt_params().
+class dtls_ccm_params_t extends ffi.Struct {
+  /// < must be exactly 15 - l bytes
+  external ffi.Pointer<ffi.Uint8> nonce;
+
+  /// < the MAC tag length (M)
+  @ffi.Uint8()
+  external int tag_length;
+
+  /// < number of bytes in the length
+  /// field (L)
+  @ffi.Uint8()
+  external int l;
+}
+
+abstract class dtls_alert_level_t {
+  static const int DTLS_ALERT_LEVEL_WARNING = 1;
+  static const int DTLS_ALERT_LEVEL_FATAL = 2;
+}
+
+abstract class dtls_alert_t {
+  static const int DTLS_ALERT_CLOSE_NOTIFY = 0;
+  static const int DTLS_ALERT_UNEXPECTED_MESSAGE = 10;
+  static const int DTLS_ALERT_BAD_RECORD_MAC = 20;
+  static const int DTLS_ALERT_RECORD_OVERFLOW = 22;
+  static const int DTLS_ALERT_DECOMPRESSION_FAILURE = 30;
+  static const int DTLS_ALERT_HANDSHAKE_FAILURE = 40;
+  static const int DTLS_ALERT_BAD_CERTIFICATE = 42;
+  static const int DTLS_ALERT_UNSUPPORTED_CERTIFICATE = 43;
+  static const int DTLS_ALERT_CERTIFICATE_REVOKED = 44;
+  static const int DTLS_ALERT_CERTIFICATE_EXPIRED = 45;
+  static const int DTLS_ALERT_CERTIFICATE_UNKNOWN = 46;
+  static const int DTLS_ALERT_ILLEGAL_PARAMETER = 47;
+  static const int DTLS_ALERT_UNKNOWN_CA = 48;
+  static const int DTLS_ALERT_ACCESS_DENIED = 49;
+  static const int DTLS_ALERT_DECODE_ERROR = 50;
+  static const int DTLS_ALERT_DECRYPT_ERROR = 51;
+  static const int DTLS_ALERT_PROTOCOL_VERSION = 70;
+  static const int DTLS_ALERT_INSUFFICIENT_SECURITY = 71;
+  static const int DTLS_ALERT_INTERNAL_ERROR = 80;
+  static const int DTLS_ALERT_USER_CANCELED = 90;
+  static const int DTLS_ALERT_NO_RENEGOTIATION = 100;
+  static const int DTLS_ALERT_UNSUPPORTED_EXTENSION = 110;
+}
+
 abstract class dtls_credentials_type_t {
   static const int DTLS_PSK_HINT = 0;
   static const int DTLS_PSK_IDENTITY = 1;
@@ -530,10 +1514,6 @@ class dtls_ecdsa_key_t extends ffi.Struct {
 
   /// < x part of the public key for the given private key >
   external ffi.Pointer<ffi.Uint8> pub_key_y;
-}
-
-abstract class dtls_ecdh_curve {
-  static const int DTLS_ECDH_CURVE_SECP256R1 = 0;
 }
 
 /// Holds global information of the DTLS engine.
@@ -655,79 +1635,6 @@ abstract class dtls_peer_type {
   static const int DTLS_CLIENT = 0;
   static const int DTLS_SERVER = 1;
 }
-
-abstract class dtls_state_t {
-  static const int DTLS_STATE_INIT = 0;
-  static const int DTLS_STATE_WAIT_CLIENTHELLO = 1;
-  static const int DTLS_STATE_WAIT_CLIENTCERTIFICATE = 2;
-  static const int DTLS_STATE_WAIT_CLIENTKEYEXCHANGE = 3;
-  static const int DTLS_STATE_WAIT_CERTIFICATEVERIFY = 4;
-  static const int DTLS_STATE_WAIT_CHANGECIPHERSPEC = 5;
-  static const int DTLS_STATE_WAIT_FINISHED = 6;
-  static const int DTLS_STATE_FINISHED = 7;
-  static const int DTLS_STATE_CLIENTHELLO = 8;
-  static const int DTLS_STATE_WAIT_SERVERCERTIFICATE = 9;
-  static const int DTLS_STATE_WAIT_SERVERKEYEXCHANGE = 10;
-  static const int DTLS_STATE_WAIT_SERVERHELLODONE = 11;
-  static const int DTLS_STATE_CONNECTED = 12;
-  static const int DTLS_STATE_CLOSING = 13;
-  static const int DTLS_STATE_CLOSED = 14;
-}
-
-class dtls_security_parameters_t extends ffi.Struct {
-  /// < compression method
-  @ffi.Int32()
-  external int compression;
-
-  /// < cipher type
-  @ffi.Int32()
-  external int cipher;
-
-  /// < counter for cipher state changes
-  @ffi.Uint16()
-  external int epoch;
-
-  /// < sequence number of last record sent
-  @ffi.Uint64()
-  external int rseq;
-
-  @ffi.Array.multi([40])
-  external ffi.Array<uint8> key_block;
-
-  /// <sequence number of last record received
-  external seqnum_t cseq;
-}
-
-/// Known compression suites.
-abstract class dtls_compression_t {
-  static const int TLS_COMPRESSION_NULL = 0;
-}
-
-/// Known cipher suites.
-abstract class dtls_cipher_t {
-  /// < NULL cipher
-  static const int TLS_NULL_WITH_NULL_NULL = 0;
-
-  /// < see RFC 6655
-  static const int TLS_PSK_WITH_AES_128_CCM_8 = 49320;
-
-  /// < see RFC 7251
-  static const int TLS_ECDHE_ECDSA_WITH_AES_128_CCM_8 = 49326;
-}
-
-typedef uint8 = ffi.Uint8;
-
-class seqnum_t extends ffi.Struct {
-  @ffi.Uint64()
-  external int cseq;
-
-  @ffi.Uint64()
-  external int bitfield;
-}
-
-class dtls_handshake_parameters_t extends ffi.Opaque {}
-
-class netq_t extends ffi.Opaque {}
 
 /// This structure contains callback functions used by tinydtls to
 /// communicate with the application. At least the write function must
@@ -874,13 +1781,6 @@ class dtls_handler_t extends ffi.Struct {
               size_t)>> verify_ecdsa_key;
 }
 
-typedef size_t = ffi.Uint64;
-
-abstract class dtls_alert_level_t {
-  static const int DTLS_ALERT_LEVEL_WARNING = 1;
-  static const int DTLS_ALERT_LEVEL_FATAL = 2;
-}
-
 /// Generic header structure of the DTLS record layer.
 @ffi.Packed(1)
 class dtls_record_header_t extends ffi.Struct {
@@ -934,20 +1834,6 @@ class dtls_client_hello_t extends ffi.Struct {
   external ffi.Array<ffi.Uint8> random;
 }
 
-/// Structure of the Hello Verify Request.
-@ffi.Packed(1)
-class dtls_hello_verify_t extends ffi.Struct {
-  @ffi.Array.multi([2])
-  external ffi.Array<ffi.Uint8> version;
-
-  /// < Length of the included cookie
-  @uint8()
-  external int cookie_length;
-
-  @ffi.Array.multi([32])
-  external ffi.Array<uint8> cookie;
-}
-
 const int WITH_POSIX = 1;
 
 const int DTLS_ECC = 1;
@@ -959,6 +1845,8 @@ const int HAVE_ARPA_INET_H = 1;
 const int HAVE_ASSERT_H = 1;
 
 const int HAVE_FCNTL_H = 1;
+
+const int HAVE_GETRANDOM = 1;
 
 const int HAVE_INTTYPES_H = 1;
 
@@ -1014,11 +1902,39 @@ const String PACKAGE_STRING = 'tinydtls 0.8.6';
 
 const String PACKAGE_TARNAME = 'tinydtls';
 
-const String PACKAGE_URL = '';
+const String PACKAGE_URL = 'https://projects.eclipse.org/projects/iot.tinydtls';
 
 const String PACKAGE_VERSION = '0.8.6';
 
 const int STDC_HEADERS = 1;
+
+const int DTLS_MAC_KEY_LENGTH = 0;
+
+const int DTLS_KEY_LENGTH = 16;
+
+const int DTLS_BLK_LENGTH = 16;
+
+const int DTLS_MAC_LENGTH = 32;
+
+const int DTLS_IV_LENGTH = 4;
+
+const int MAX_KEYBLOCK_LENGTH = 40;
+
+const int DTLS_MASTER_SECRET_LENGTH = 48;
+
+const int DTLS_RANDOM_LENGTH = 32;
+
+const int DTLS_PSK_MAX_CLIENT_IDENTITY_LEN = 32;
+
+const int DTLS_PSK_MAX_KEY_LEN = 16;
+
+const int DTLS_EC_KEY_SIZE = 32;
+
+const int DTLS_EVENT_CONNECT = 476;
+
+const int DTLS_EVENT_CONNECTED = 478;
+
+const int DTLS_EVENT_RENEGOTIATE = 479;
 
 const int DTLS_VERSION = 65277;
 
