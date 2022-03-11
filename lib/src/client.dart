@@ -489,10 +489,19 @@ class DtlsClient {
     return session;
   }
 
-  /// Establishes a connection with a peer using the given [address] and [port].
+  /// Establishes a [DtlsConnection] with a peer using the given [address] and
+  /// [port].
   ///
-  /// Optional [pskCredentials], [ecdsaKeys], or an [eventListener] can be
-  /// provided.
+  /// Either [pskCredentials] or [ecdsaKeys], or both can be provided (in this
+  /// case the peer will be offered both a PSK and an ECC cipher during the
+  /// DTLS Handshake).
+  /// If neither [pskCredentials] nor [ecdsaKeys] are given, an [ArgumentError]
+  /// is thrown.
+  ///
+  /// If a [DtlsConnection] to a peer with the given [address] and [port]
+  /// already exists, that connection will be reused instead of opening a new
+  /// one. If you want to establish a connection using different credentials,
+  /// then you need to close the old connection first.
   Future<DtlsConnection> connect(InternetAddress address, int port,
       {PskCredentials? pskCredentials,
       EcdsaKeys? ecdsaKeys,
