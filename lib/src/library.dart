@@ -10,6 +10,7 @@ import 'ffi/generated_bindings.dart';
 
 DynamicLibrary _loadTinyDtlsLibrary() {
   // TODO(JKRhb): Check if paths should be adjusted
+  // TODO(JKRhb): Should Exceptions instead of Errors be thrown here?
   if (Platform.isAndroid) {
     return DynamicLibrary.open("libtinydtls.so");
   }
@@ -39,8 +40,7 @@ DynamicLibrary _loadTinyDtlsLibrary() {
     return DynamicLibrary.executable();
   }
 
-  throw StateError("There is currently no tinyDTLS support on "
-      "${Platform.operatingSystem}!");
+  throw StateError("Couldn't find a shared tinyDTLS library.");
 }
 
 TinyDTLS _loadTinyDtls() {
