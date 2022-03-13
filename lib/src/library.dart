@@ -8,6 +8,10 @@ import 'dart:io';
 
 import 'ffi/generated_bindings.dart';
 
+const _linuxFileName = "libtinydtls.so";
+const _windowsFileName = "libtinydtls.dll";
+const _macosFileName = "libtinydtls.dylib";
+
 /// This [Exception] is thrown if there is an error loading
 /// the shared tinyDTLS library.
 ///
@@ -22,31 +26,39 @@ class TinyDtlsLoadException implements Exception {
   TinyDtlsLoadException(this.message);
 }
 
+String _findTinyDtlsLibrary(List<String> paths, String fileName) {
+  for (final path in paths) {
+    final fileExists = File(path).existsSync();
+    if (fileExists) {
+      return path;
+    }
+  }
+
+  throw TinyDtlsLoadException("Couldn't find $fileName.");
+}
+
 DynamicLibrary _loadTinyDtlsLibrary() {
   // TODO(JKRhb): Check if paths should be adjusted
   if (Platform.isAndroid) {
-    return DynamicLibrary.open("libtinydtls.so");
+    return DynamicLibrary.open(_linuxFileName);
   }
 
   if (Platform.isLinux) {
-    final paths = ["./libtinydtls.so", "/usr/local/lib/libtinydtls.so"];
-
-    for (final path in paths) {
-      final fileExists = File(path).existsSync();
-      if (fileExists) {
-        return DynamicLibrary.open(path);
-      }
-    }
-
-    throw TinyDtlsLoadException("Couldn't find libtinydtls.so.");
+    const paths = ["./$_linuxFileName", "/usr/local/lib/$_linuxFileName"];
+    final path = _findTinyDtlsLibrary(paths, _linuxFileName);
+    return DynamicLibrary.open(path);
   }
 
   if (Platform.isWindows) {
-    return DynamicLibrary.open("libtinydtls.dll");
+    const paths = [_windowsFileName];
+    final path = _findTinyDtlsLibrary(paths, _windowsFileName);
+    return DynamicLibrary.open(path);
   }
 
   if (Platform.isMacOS) {
-    return DynamicLibrary.open("libtinydtls.dylib");
+    const paths = [_macosFileName];
+    final path = _findTinyDtlsLibrary(paths, _macosFileName);
+    return DynamicLibrary.open(path);
   }
 
   if (Platform.isIOS) {
