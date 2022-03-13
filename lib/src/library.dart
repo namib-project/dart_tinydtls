@@ -48,4 +48,4 @@ TinyDTLS _loadTinyDtls() {
 }
 
 /// Represents the loaded tinyDTLS library.
-final TinyDTLS globalTinyDtls = _loadTinyDtls();
+late final TinyDTLS globalTinyDtls = _loadTinyDtls();
