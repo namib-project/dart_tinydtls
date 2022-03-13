@@ -10,8 +10,21 @@ import 'ffi/generated_bindings.dart';
 
 DynamicLibrary _loadTinyDtlsLibrary() {
   // TODO(JKRhb): Check if paths should be adjusted
-  if (Platform.isAndroid || Platform.isLinux) {
-    return DynamicLibrary.open("./libtinydtls.so");
+  if (Platform.isAndroid) {
+    return DynamicLibrary.open("libtinydtls.so");
+  }
+
+  if (Platform.isLinux) {
+    final paths = ["./libtinydtls.so", "/usr/local/lib/libtinydtls.so"];
+
+    for (final path in paths) {
+      final fileExists = File(path).existsSync();
+      if (fileExists) {
+        return DynamicLibrary.open(path);
+      }
+    }
+
+    throw StateError("Couldn't find libtinydtls.so.");
   }
 
   if (Platform.isWindows) {
