@@ -8,9 +8,22 @@ import 'dart:io';
 
 import 'ffi/generated_bindings.dart';
 
+/// This [Exception] is thrown if there is an error loading
+/// the shared tinyDTLS library.
+///
+/// Using an [Exception] instead of an [Error] allows users
+/// to provide a fallback or throw their own [Exception]s
+/// if tinyDTLS should not be available.
+class TinyDtlsLoadException implements Exception {
+  /// The actual error message.
+  final String message;
+
+  /// Constructor.
+  TinyDtlsLoadException(this.message);
+}
+
 DynamicLibrary _loadTinyDtlsLibrary() {
   // TODO(JKRhb): Check if paths should be adjusted
-  // TODO(JKRhb): Should Exceptions instead of Errors be thrown here?
   if (Platform.isAndroid) {
     return DynamicLibrary.open("libtinydtls.so");
   }
@@ -25,7 +38,7 @@ DynamicLibrary _loadTinyDtlsLibrary() {
       }
     }
 
-    throw StateError("Couldn't find libtinydtls.so.");
+    throw TinyDtlsLoadException("Couldn't find libtinydtls.so.");
   }
 
   if (Platform.isWindows) {
@@ -40,7 +53,7 @@ DynamicLibrary _loadTinyDtlsLibrary() {
     return DynamicLibrary.executable();
   }
 
-  throw StateError("Couldn't find a shared tinyDTLS library.");
+  throw TinyDtlsLoadException("Couldn't find a shared tinyDTLS library.");
 }
 
 TinyDTLS _loadTinyDtls() {
