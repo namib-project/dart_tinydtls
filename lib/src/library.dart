@@ -8,26 +8,64 @@ import 'dart:io';
 
 import 'ffi/generated_bindings.dart';
 
+const _linuxFileName = "libtinydtls.so";
+const _windowsFileName = "libtinydtls.dll";
+const _macosFileName = "libtinydtls.dylib";
+
+/// This [Exception] is thrown if there is an error loading
+/// the shared tinyDTLS library.
+///
+/// Using an [Exception] instead of an [Error] allows users
+/// to provide a fallback or throw their own [Exception]s
+/// if tinyDTLS should not be available.
+class TinyDtlsLoadException implements Exception {
+  /// The actual error message.
+  final String message;
+
+  /// Constructor.
+  TinyDtlsLoadException(this.message);
+}
+
+String _findTinyDtlsLibrary(List<String> paths, String fileName) {
+  for (final path in paths) {
+    final fileExists = File(path).existsSync();
+    if (fileExists) {
+      return path;
+    }
+  }
+
+  throw TinyDtlsLoadException("Couldn't find $fileName.");
+}
+
 DynamicLibrary _loadTinyDtlsLibrary() {
   // TODO(JKRhb): Check if paths should be adjusted
-  if (Platform.isAndroid || Platform.isLinux) {
-    return DynamicLibrary.open("./libtinydtls.so");
+  if (Platform.isAndroid) {
+    return DynamicLibrary.open(_linuxFileName);
+  }
+
+  if (Platform.isLinux) {
+    const paths = ["./$_linuxFileName", "/usr/local/lib/$_linuxFileName"];
+    final path = _findTinyDtlsLibrary(paths, _linuxFileName);
+    return DynamicLibrary.open(path);
   }
 
   if (Platform.isWindows) {
-    return DynamicLibrary.open("libtinydtls.dll");
+    const paths = [_windowsFileName];
+    final path = _findTinyDtlsLibrary(paths, _windowsFileName);
+    return DynamicLibrary.open(path);
   }
 
   if (Platform.isMacOS) {
-    return DynamicLibrary.open("libtinydtls.dylib");
+    const paths = [_macosFileName];
+    final path = _findTinyDtlsLibrary(paths, _macosFileName);
+    return DynamicLibrary.open(path);
   }
 
   if (Platform.isIOS) {
     return DynamicLibrary.executable();
   }
 
-  throw StateError("There is currently no tinyDTLS support on "
-      "${Platform.operatingSystem}!");
+  throw TinyDtlsLoadException("Couldn't find a shared tinyDTLS library.");
 }
 
 TinyDTLS _loadTinyDtls() {
@@ -35,4 +73,4 @@ TinyDTLS _loadTinyDtls() {
 }
 
 /// Represents the loaded tinyDTLS library.
-final TinyDTLS globalTinyDtls = _loadTinyDtls();
+late final TinyDTLS globalTinyDtls = _loadTinyDtls();
