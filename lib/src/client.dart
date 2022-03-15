@@ -30,7 +30,7 @@ InternetAddressType _addressTypeFromSession(Pointer<session_t> session) {
 
 InternetAddress _ipv4AddressFromSession(Pointer<session_t> session) {
   final Pointer<ffi.Uint8> pointer = session.cast();
-  const _ipv4AddressOffset = 8;
+  const _ipv4AddressOffset = 12;
   const _ipv4AddressByteLength = 4;
   return InternetAddress.fromRawAddress(pointer
       .elementAt(_ipv4AddressOffset)
@@ -381,18 +381,17 @@ class DtlsClient {
   static Pointer<sockaddr> _fromIPv4Address(InternetAddress address, int port) {
     final sockAddr = malloc<sockaddr_in>();
     sockAddr.ref.sin_family = AF_INET;
-    final inAddr = malloc<in_addr>();
 
-    // The IPv4 version of the sockaddr struct seems to use network byte order,
-    // therefore the bytes representing the address and the port have to be
-    // reversed.
-    inAddr.ref.s_addr = ByteData.view(
-            Uint8List.fromList(address.rawAddress.reversed.toList()).buffer)
-        .getUint32(0);
-    sockAddr.ref.sin_addr = inAddr.ref;
+    final Pointer<Uint8> addressArray = Pointer.fromAddress(sockAddr.address);
+    final addressOffset = sizeOf<sa_family_t>() + sizeOf<in_port_t>();
+
+    addressArray
+        .elementAt(addressOffset)
+        .asTypedList(sizeOf<in_addr>())
+        .setAll(0, address.rawAddress.toList());
 
     final sinPort = Uint16List(1)
-      ..buffer.asByteData().setUint16(0, port, Endian.big);
+      ..buffer.asByteData().setUint16(0, port, Endian.little);
     sockAddr.ref.sin_port = sinPort[0];
 
     return sockAddr.cast();
