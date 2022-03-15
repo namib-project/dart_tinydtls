@@ -152,7 +152,7 @@ int _verifyEcdsaKey(
 ///
 /// Closing the [DtlsClient] with the [close] method also closes all existing
 /// [DtlsConnection]s.
-class DtlsClient {
+class DtlsClient extends Stream<Datagram> {
   final TinyDTLS _tinyDtls;
 
   bool _closed = false;
@@ -210,6 +210,7 @@ class DtlsClient {
   /// The [onError], [onDone], and [cancelOnError] parameters are passed to the
   /// underlying [Stream], just as the [onData] handler.
   // TODO(JKRhb): Consider returning a custom event class instead.
+  @override
   StreamSubscription<Datagram> listen(void Function(Datagram event)? onData,
       {Function? onError, void Function()? onDone, bool? cancelOnError}) {
     return _receivedStream.listen(onData,
