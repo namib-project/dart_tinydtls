@@ -12,73 +12,19 @@ import 'dart:typed_data';
 
 import 'package:ffi/ffi.dart';
 
+import 'dtls_event.dart';
 import 'ecdsa_keys.dart';
 import 'ffi/generated_bindings.dart';
 import 'library.dart';
+import 'psk_credentials.dart';
 import 'types.dart';
-
-InternetAddressType _addressTypeFromSession(Pointer<session_t> session) {
-  final type = session.ref.addr.sa.sa_family;
-  if (type == AF_INET) {
-    return InternetAddressType.IPv4;
-  } else if (type == AF_INET6) {
-    return InternetAddressType.IPv6;
-  }
-
-  throw StateError("Unknown Internetaddress type $type in DTLS session");
-}
-
-InternetAddress _ipv4AddressFromSession(Pointer<session_t> session) {
-  final Pointer<ffi.Uint8> pointer = session.cast();
-  const _ipv4AddressOffset = 12;
-  const _ipv4AddressByteLength = 4;
-  return InternetAddress.fromRawAddress(pointer
-      .elementAt(_ipv4AddressOffset)
-      .asTypedList(_ipv4AddressByteLength));
-}
-
-InternetAddress _ipv6AddressFromSession(Pointer<session_t> session) {
-  final Pointer<ffi.Uint8> pointer = session.cast();
-
-  const _ipv6AddressOffset = 16;
-  const _ipv6AddressByteLength = 16;
-
-  return InternetAddress.fromRawAddress(pointer
-      .elementAt(_ipv6AddressOffset)
-      .asTypedList(_ipv6AddressByteLength));
-}
-
-InternetAddress _addressFromSession(Pointer<session_t> session) {
-  final type = _addressTypeFromSession(session);
-
-  if (type == InternetAddressType.IPv4) {
-    return _ipv4AddressFromSession(session);
-  } else {
-    // type must be InternetAddressType.IPv6 here
-    return _ipv6AddressFromSession(session);
-  }
-}
-
-int _portFromSession(Pointer<session_t> session) {
-  final type = _addressTypeFromSession(session);
-
-  if (type == InternetAddressType.IPv4) {
-    final sin = session.ref.addr.sin;
-    return sin.sin_port;
-  } else {
-    // type must be InternetAddressType.IPv6 here
-    final sin6 = session.ref.addr.sin6;
-    final sinPort = Uint16List(1)
-      ..buffer.asByteData().setUint16(0, sin6.sin6_port, Endian.big);
-    return sinPort[0];
-  }
-}
+import 'util.dart';
 
 int _handleWrite(Pointer<dtls_context_t> context, Pointer<session_t> session,
     Pointer<ffi.Uint8> dataAddress, int dataLength) {
   final data = dataAddress.asTypedList(dataLength).buffer.asUint8List();
-  final address = _addressFromSession(session);
-  final port = _portFromSession(session);
+  final address = addressFromSession(session);
+  final port = portFromSession(session);
 
   final connection = DtlsConnection._connections[context.address];
   return connection?._sendInternal(data, address, port) ?? errorCode;
@@ -93,38 +39,12 @@ int _handleRead(Pointer<dtls_context_t> context, Pointer<session_t> session,
   }
 
   final data = dataAddress.asTypedList(dataLength);
-  final address = _addressFromSession(session);
-  final port = _portFromSession(session);
+  final address = addressFromSession(session);
+  final port = portFromSession(session);
 
   connection._receive(Datagram(data, address, port));
 
   return dataLength;
-}
-
-/// Events that are being signalled by tinyDTLS during and after the
-/// connection establishment.
-enum DtlsEvent {
-  /// Occurs when the Client is trying to connect to the peer.
-  dtlsEventConnect,
-
-  /// Occurs when the connection has been successfully established.
-  dtlsEventConnected,
-
-  /// Occurs if the Client is trying to re-connect to an endpoint.
-  dtlsEventRenegotiate
-}
-
-DtlsEvent? _eventFromCode(int code) {
-  switch (code) {
-    case DTLS_EVENT_CONNECT:
-      return DtlsEvent.dtlsEventConnect;
-    case DTLS_EVENT_CONNECTED:
-      return DtlsEvent.dtlsEventConnected;
-    case DTLS_EVENT_RENEGOTIATE:
-      return DtlsEvent.dtlsEventRenegotiate;
-    default:
-      return null;
-  }
 }
 
 int _handleEvent(Pointer<dtls_context_t> context, Pointer<session_t> session,
@@ -135,19 +55,13 @@ int _handleEvent(Pointer<dtls_context_t> context, Pointer<session_t> session,
     return errorCode;
   }
 
-  final dtlsEvent = _eventFromCode(code);
+  final dtlsEvent = eventFromCode(code);
 
   if (dtlsEvent != null) {
     connection._emitDtlsEvent(dtlsEvent);
   }
 
   return success;
-}
-
-/// Reimplementation of an inline function that encodes a log level for fatal errors
-/// and a numeric [description] code into a single value.
-int _createFatalError(int description) {
-  return -((dtls_alert_level_t.DTLS_ALERT_LEVEL_FATAL << 8) | description);
 }
 
 int _retrievePskInfo(
@@ -176,7 +90,7 @@ int _retrievePskInfo(
     case dtls_credentials_type_t.DTLS_PSK_IDENTITY:
       final _identity = identity ?? "";
       if (resultLength < _identity.length) {
-        return _createFatalError(dtls_alert_t.DTLS_ALERT_INTERNAL_ERROR);
+        return createFatalError(dtls_alert_t.DTLS_ALERT_INTERNAL_ERROR);
       }
       final identityBytes = utf8.encoder.convert(_identity);
       result.asTypedList(resultLength).setAll(0, identityBytes);
@@ -184,7 +98,7 @@ int _retrievePskInfo(
     case dtls_credentials_type_t.DTLS_PSK_KEY:
       {
         if (psk == null || identity != idString) {
-          return _createFatalError(dtls_alert_t.DTLS_ALERT_ILLEGAL_PARAMETER);
+          return createFatalError(dtls_alert_t.DTLS_ALERT_ILLEGAL_PARAMETER);
         }
 
         final pskBytes = utf8.encoder.convert(psk);
@@ -193,7 +107,7 @@ int _retrievePskInfo(
       }
     case dtls_credentials_type_t.DTLS_PSK_HINT:
     default:
-      return _createFatalError(dtls_alert_t.DTLS_ALERT_INTERNAL_ERROR);
+      return createFatalError(dtls_alert_t.DTLS_ALERT_INTERNAL_ERROR);
   }
 }
 
@@ -223,19 +137,6 @@ int _verifyEcdsaKey(
   return success;
 }
 
-/// Credentials used for PSK Cipher Suites consisting of an [identity]
-/// and a [preSharedKey].
-class PskCredentials {
-  /// The identity used with the [preSharedKey].
-  String identity;
-
-  /// The actual pre-shared key.
-  String preSharedKey;
-
-  /// Constructor
-  PskCredentials(this.identity, this.preSharedKey);
-}
-
 /// Client for connecting to DTLS Servers and sending UDP packets with encrpyted
 /// payloads afterwards.
 ///
@@ -260,27 +161,12 @@ class DtlsClient {
 
   final RawDatagramSocket _socket;
 
-  static const _bufferSize = (1 << 16);
-  static final Pointer<Uint8> _buffer = malloc.call<Uint8>(_bufferSize);
-
   final _received = StreamController<Datagram>();
   Stream<Datagram> get _receivedStream => _received.stream;
 
   final Map<String, DtlsConnection> _connections = {};
 
-  /// Used to check whether a [TinyDTLS] object has already been initialized.
-  static final List<TinyDTLS> _initializationList = [];
-
   bool _externalSocket = true;
-
-  static TinyDTLS _initializeTinyDtls(TinyDTLS? tinyDtls) {
-    final selectedTinyDtls = tinyDtls ?? globalTinyDtls;
-    if (!_initializationList.contains(selectedTinyDtls)) {
-      selectedTinyDtls.dtls_init();
-      _initializationList.add(selectedTinyDtls);
-    }
-    return selectedTinyDtls;
-  }
 
   /// Creates a new [DtlsClient] that uses a pre-existing [RawDatagramSocket].
   ///
@@ -290,7 +176,7 @@ class DtlsClient {
   /// message exchanges can be set with the [_maxTimeoutSeconds] argument.
   DtlsClient(this._socket, {int maxTimeoutSeconds = 60, TinyDTLS? tinyDTLS})
       : _maxTimeoutSeconds = maxTimeoutSeconds,
-        _tinyDtls = _initializeTinyDtls(tinyDTLS) {
+        _tinyDtls = initializeTinyDtls(tinyDTLS) {
     _startListening();
   }
 
@@ -377,70 +263,6 @@ class DtlsClient {
     return context;
   }
 
-  /// Creates an IPv4 [sockaddr] struct and returns a [Pointer] to it.
-  static Pointer<sockaddr> _fromIPv4Address(InternetAddress address, int port) {
-    final sockAddr = malloc<sockaddr_in>();
-    sockAddr.ref.sin_family = AF_INET;
-
-    final Pointer<Uint8> addressArray = Pointer.fromAddress(sockAddr.address);
-    final addressOffset = sizeOf<sa_family_t>() + sizeOf<in_port_t>();
-
-    addressArray
-        .elementAt(addressOffset)
-        .asTypedList(sizeOf<in_addr>())
-        .setAll(0, address.rawAddress.toList());
-
-    final sinPort = Uint16List(1)
-      ..buffer.asByteData().setUint16(0, port, Endian.little);
-    sockAddr.ref.sin_port = sinPort[0];
-
-    return sockAddr.cast();
-  }
-
-  /// Creates an IPv6 [sockaddr] struct and returns a [Pointer] to it.
-  static Pointer<sockaddr> _fromIPv6Address(InternetAddress address, int port) {
-    final sockAddr = malloc<sockaddr_in6>();
-    sockAddr.ref.sin6_family = AF_INET6;
-
-    final Pointer<ffi.Uint8> addressArray =
-        Pointer.fromAddress(sockAddr.address);
-    final addressOffset =
-        sizeOf<sa_family_t>() + sizeOf<in_port_t>() + sizeOf<Uint32>();
-    addressArray
-        .elementAt(addressOffset)
-        .asTypedList(sizeOf<in6_addr>())
-        .setAll(0, address.rawAddress.toList());
-
-    final sinPort = Uint16List(1)
-      ..buffer.asByteData().setUint16(0, port, Endian.big);
-    sockAddr.ref.sin6_port = sinPort[0];
-
-    return sockAddr.cast();
-  }
-
-  static Pointer<sockaddr> _createSockAddr(InternetAddress address, int port) {
-    switch (address.type) {
-      case InternetAddressType.IPv4:
-        return _fromIPv4Address(address, port);
-      case InternetAddressType.IPv6:
-        return _fromIPv6Address(address, port);
-      default:
-        throw ArgumentError(
-            "InternetAddressType '${address.type}' not supported");
-    }
-  }
-
-  static int _getAddrLen(InternetAddressType type) {
-    switch (type) {
-      case InternetAddressType.IPv4:
-        return sizeOf<sockaddr_in>();
-      case InternetAddressType.IPv6:
-        return sizeOf<sockaddr_in6>();
-      default:
-        throw ArgumentError("Invalid InternetAddressType $type");
-    }
-  }
-
   void _checkConnectionStatus(DtlsConnection connection) {
     final session = connection._session;
     final context = connection._context;
@@ -475,19 +297,6 @@ class DtlsClient {
     });
   }
 
-  Pointer<session_t> _createSession(InternetAddress address, int port) {
-    final addr = _createSockAddr(address, port);
-    final addrlen = _getAddrLen(address.type);
-    final session = _tinyDtls.dtls_new_session(addr, addrlen);
-    malloc.free(addr);
-
-    if (session.address == nullptr.address) {
-      throw StateError("Error occurred establishing DTLS session");
-    }
-
-    return session;
-  }
-
   /// Establishes a [DtlsConnection] with a peer using the given [address] and
   /// [port].
   ///
@@ -517,7 +326,7 @@ class DtlsClient {
 
     final context = _createContext(
         hasPsk: pskCredentials != null, hasEcdsaKey: ecdsaKeys != null);
-    final session = _createSession(address, port);
+    final session = createSession(_tinyDtls, address, port);
 
     final connection = DtlsConnection(this, session, context,
         pskCredentials: pskCredentials,
@@ -568,8 +377,8 @@ class DtlsClient {
 
   int _send(List<int> data, Pointer<dtls_context_t> context,
       Pointer<session_t> session) {
-    _buffer.asTypedList(_bufferSize).setAll(0, data);
-    final result = _tinyDtls.dtls_write(context, session, _buffer, data.length);
+    buffer.asTypedList(data.length).setAll(0, data);
+    final result = _tinyDtls.dtls_write(context, session, buffer, data.length);
 
     if (result == -1) {
       throw StateError("Error sending DTLS message");
@@ -582,8 +391,8 @@ class DtlsClient {
 
   void _receive(Uint8List data, Pointer<dtls_context_t> context,
       Pointer<session_t> session) {
-    _buffer.asTypedList(_bufferSize).setAll(0, data);
-    _tinyDtls.dtls_handle_message(context, session, _buffer, _bufferSize);
+    buffer.asTypedList(data.length).setAll(0, data);
+    _tinyDtls.dtls_handle_message(context, session, buffer, data.length);
   }
 
   /// Closes this [DtlsClient].
@@ -608,34 +417,6 @@ class DtlsClient {
 
     _closed = true;
   }
-}
-
-/// Convert [EcdsaKeys] object to a Dart ffi [Pointer].
-Pointer<dtls_ecdsa_key_t> _ecdsaKeysToPointer(EcdsaKeys ecdsaKeys) {
-  final ecdsaKeyStruct = malloc<dtls_ecdsa_key_t>();
-  final structReference = ecdsaKeyStruct.ref
-    ..priv_key = malloc<Uint8>(DTLS_EC_KEY_SIZE)
-    ..pub_key_x = malloc<Uint8>(DTLS_EC_KEY_SIZE)
-    ..pub_key_y = malloc<Uint8>(DTLS_EC_KEY_SIZE);
-
-  switch (ecdsaKeys.ecdsaCurve) {
-    case EcdsaCurve.dtlsEcdhCurveSecp256R1:
-      structReference.curve = dtls_ecdh_curve.DTLS_ECDH_CURVE_SECP256R1;
-      break;
-    default:
-      throw ArgumentError("Unknown Cipher ${ecdsaKeys.ecdsaCurve} found.");
-  }
-  structReference.priv_key
-      .asTypedList(DTLS_EC_KEY_SIZE)
-      .setAll(0, ecdsaKeys.privateKey);
-  structReference.pub_key_x
-      .asTypedList(DTLS_EC_KEY_SIZE)
-      .setAll(0, ecdsaKeys.publicKeyX);
-  structReference.pub_key_y
-      .asTypedList(DTLS_EC_KEY_SIZE)
-      .setAll(0, ecdsaKeys.publicKeyY);
-
-  return ecdsaKeyStruct;
 }
 
 /// Represents a [DtlsClient]'s connection to a peer.
@@ -677,7 +458,7 @@ class DtlsConnection {
     _connections[_context.address] = this;
 
     if (ecdsaKeys != null) {
-      _ecdsaKeyStruct = _ecdsaKeysToPointer(ecdsaKeys);
+      _ecdsaKeyStruct = ecdsaKeysToPointer(ecdsaKeys);
     }
 
     _eventStream.listen(eventListener);
@@ -706,20 +487,6 @@ class DtlsConnection {
     _dtlsClient._received.sink.add(data);
   }
 
-  void _freeEdcsaStruct() {
-    if (_ecdsaKeyStruct != nullptr) {
-      final structReference = _ecdsaKeyStruct.ref;
-      for (final keyPointer in [
-        structReference.priv_key,
-        structReference.pub_key_x,
-        structReference.pub_key_y
-      ]) {
-        malloc.free(keyPointer);
-      }
-      malloc.free(_ecdsaKeyStruct);
-    }
-  }
-
   /// Closes this [DtlsConnection].
   void close() {
     if (_closed) {
@@ -733,7 +500,7 @@ class DtlsConnection {
 
     _connections.remove(_context.address);
 
-    _freeEdcsaStruct();
+    freeEdcsaStruct(_ecdsaKeyStruct);
     _dtlsEvents.close();
 
     _closed = true;
