@@ -1,6 +1,6 @@
 name: dart_tinydtls
 description: Dart ffi bindings to the tinydtls library.
-version: 0.1.0
+version: 0.2.0
 homepage: https://github.com/namib-project/dart_tinydtls
 
 environment:
