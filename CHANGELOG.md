@@ -1,3 +1,7 @@
+## 0.2.1
+
+- Expanded package description in pubspec.yaml
+
 ## 0.2.0
 
 - Refactored tests and example
