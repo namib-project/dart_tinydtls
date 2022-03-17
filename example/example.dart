@@ -27,7 +27,7 @@ Future<void> main() async {
       keyStore: {"Client_identity": "secretPSK"}, ecdsaKeys: _getKeys());
   server.listen(((event) {
     print(utf8.decode(event.data.data));
-    event.respond(Utf8Encoder().convert("Hello from world!"));
+    event.respond(utf8.encode("Hello from world!"));
   }));
   final client = await DtlsClient.bind(InternetAddress.anyIPv6, 0);
 
@@ -47,9 +47,9 @@ Future<void> main() async {
       ecdsaKeys: _getKeys(),
       eventListener: print);
 
-  connection.send(Uint8List.fromList(utf8.encode('Hello World!')));
+  connection.send(utf8.encode('Hello World!'));
   sleep(Duration(seconds: 1));
-  connection.send(Uint8List.fromList(utf8.encode('Goodbye World!')));
+  connection.send(utf8.encode('Goodbye World!'));
 }
 
 const privateKeyList = [
