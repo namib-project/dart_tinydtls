@@ -6,6 +6,8 @@
 import 'dart:ffi';
 import 'dart:io';
 
+import 'package:ffi/ffi.dart';
+
 import 'ffi/generated_bindings.dart';
 
 const _linuxFileName = "libtinydtls.so";
@@ -74,3 +76,8 @@ TinyDTLS _loadTinyDtls() {
 
 /// Represents the loaded tinyDTLS library.
 late final TinyDTLS globalTinyDtls = _loadTinyDtls();
+
+const _bufferSize = (1 << 16);
+
+/// Buffer used by tinyDTLS for reading and writing.
+late final Pointer<Uint8> buffer = malloc.call<Uint8>(_bufferSize);

@@ -8,6 +8,8 @@
 /// Provides a DTLS client with PSK and ECC support.
 library dart_tinydtls;
 
-export 'src/client.dart' show DtlsClient, PskCredentials, DtlsConnection;
-export 'src/ecdsa_keys.dart';
+export 'src/client.dart' show DtlsClient, DtlsConnection;
+export 'src/dtls_event.dart' show DtlsEvent;
+export 'src/ecdsa_keys.dart' show EcdsaKeys, EcdsaCurve;
 export 'src/ffi/generated_bindings.dart' show TinyDTLS;
+export 'src/psk_credentials.dart';
