@@ -19,16 +19,23 @@ EcdsaKeys _getKeys() {
 }
 
 // Insert your test server address and port here
-const address = "2001:db8:3333:4444:5555:6666:7777:8888";
-const port = 20220;
+const address = "::1";
+const port = 5684;
 
 Future<void> main() async {
+  final server = await DtlsServer.bind(InternetAddress.anyIPv6, 5684,
+      keyStore: {"Client_identity": "secretPSK"}, ecdsaKeys: _getKeys());
+  server.listen(((event) {
+    print(utf8.decode(event.data.data));
+    event.respond(Utf8Encoder().convert("Hello from world!"));
+  }));
   final client = await DtlsClient.bind(InternetAddress.anyIPv6, 0);
 
   int responses = 0;
   client.listen((event) {
-    print(event);
+    print(utf8.decode(event.data));
     if (++responses >= 2) {
+      server.close();
       client.close();
     }
   });
