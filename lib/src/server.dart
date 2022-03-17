@@ -306,7 +306,7 @@ class DtlsServer extends Stream<DtlsServerEvent> {
 /// This Event is emitted if a [DtlsServer] receives application data.
 class DtlsServerEvent {
   /// The received [Datagram] that triggered this [DtlsServerEvent].
-  final Datagram data;
+  final Datagram datagram;
 
   final DtlsServer _server;
 
@@ -315,7 +315,7 @@ class DtlsServerEvent {
   final Pointer<session_t> _session;
 
   /// Constructor
-  DtlsServerEvent(this.data, this._server, this._context, this._session);
+  DtlsServerEvent(this.datagram, this._server, this._context, this._session);
 
   /// Sends [data] to the peer of the [DtlsServer] where this [DtlsServerEvent]
   /// originated from.

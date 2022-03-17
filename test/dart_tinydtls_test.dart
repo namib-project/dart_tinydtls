@@ -47,7 +47,7 @@ void main() {
           keyStore: {identity: preSharedKey});
 
       server.listen(((event) {
-        expect(utf8.decode(event.data.data), clientMessage);
+        expect(utf8.decode(event.datagram.data), clientMessage);
         event.respond(utf8.encode(serverMessage));
       }));
 
