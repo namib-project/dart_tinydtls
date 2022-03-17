@@ -25,10 +25,10 @@ const port = 5684;
 Future<void> main() async {
   final server = await DtlsServer.bind(InternetAddress.anyIPv6, 5684,
       keyStore: {"Client_identity": "secretPSK"}, ecdsaKeys: _getKeys());
-  server.listen(((event) {
+  server.listen((event) {
     print(utf8.decode(event.datagram.data));
     event.respond(utf8.encode("Hello from world!"));
-  }));
+  });
   final client = await DtlsClient.bind(InternetAddress.anyIPv6, 0);
 
   int responses = 0;
