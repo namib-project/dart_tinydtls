@@ -5,7 +5,6 @@
 
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:dart_tinydtls/dart_tinydtls.dart';
 import 'package:test/test.dart';
@@ -48,7 +47,7 @@ void main() {
           keyStore: {identity: preSharedKey});
 
       server.listen(((event) {
-        expect(utf8.decode(event.data.data), clientMessage);
+        expect(utf8.decode(event.datagram.data), clientMessage);
         event.respond(utf8.encode(serverMessage));
       }));
 
@@ -62,7 +61,7 @@ void main() {
       final connection = await client.connect(InternetAddress(address), port,
           pskCredentials: PskCredentials(identity, preSharedKey));
 
-      connection.send(Uint8List.fromList(utf8.encode(clientMessage)));
+      connection.send(utf8.encode(clientMessage));
     });
   });
 }
