@@ -1,6 +1,7 @@
 # dart_tinydtls
 
 Dart ffi bindings to the tinydtls library.
+Provides wrappers for both a DTLS client and server.
 
 ## Generating the bindings
 
