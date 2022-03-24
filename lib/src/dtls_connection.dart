@@ -3,10 +3,12 @@
 //
 // SPDX-License-Identifier: EPL-1.0 OR BSD-3-CLAUSE
 
+import 'dart:io';
+
 /// Represents a DTLS connection to a peer.
 ///
 /// Can be used to [send] data to the peer.
-abstract class DtlsConnection {
+abstract class DtlsConnection extends Stream<Datagram> {
   /// Whether this [DtlsConnection] is still connected.
   bool get connected;
 

@@ -153,7 +153,7 @@ int _verifyEcdsaKey(
 ///
 /// Closing the [DtlsClient] with the [close] method also closes all existing
 /// [DtlsConnection]s.
-class DtlsClient extends Stream<Datagram> {
+class DtlsClient {
   final TinyDTLS _tinyDtls;
 
   bool _closed = false;
@@ -161,9 +161,6 @@ class DtlsClient extends Stream<Datagram> {
   final int _maxTimeoutSeconds;
 
   final RawDatagramSocket _socket;
-
-  final _received = StreamController<Datagram>();
-  Stream<Datagram> get _receivedStream => _received.stream;
 
   final Map<String, DtlsClientConnection> _connections = {};
 
@@ -201,21 +198,6 @@ class DtlsClient extends Stream<Datagram> {
     return DtlsClient(socket,
         maxTimeoutSeconds: maxTimeoutSeconds, tinyDTLS: tinyDtls)
       .._externalSocket = false;
-  }
-
-  /// Listens for incoming application data that will be passed to the [onData]
-  /// handler as [Datagram]s.
-  ///
-  /// Data from all receiving connections will be passed to this callback.
-  ///
-  /// The [onError], [onDone], and [cancelOnError] parameters are passed to the
-  /// underlying [Stream], just as the [onData] handler.
-  // TODO(JKRhb): Consider returning a custom event class instead.
-  @override
-  StreamSubscription<Datagram> listen(void Function(Datagram event)? onData,
-      {Function? onError, void Function()? onDone, bool? cancelOnError}) {
-    return _receivedStream.listen(onData,
-        onError: onError, onDone: onDone, cancelOnError: cancelOnError);
   }
 
   Pointer<dtls_context_t> _createContext(
@@ -322,7 +304,7 @@ class DtlsClient extends Stream<Datagram> {
 
     final key = "${address.host}:$port";
     final existingConnection = _connections[key];
-    if (existingConnection != null) {
+    if (existingConnection != null && !existingConnection._closed) {
       return existingConnection;
     }
 
@@ -415,8 +397,6 @@ class DtlsClient extends Stream<Datagram> {
       _socket.close();
     }
 
-    _received.close();
-
     _closed = true;
   }
 }
@@ -424,7 +404,7 @@ class DtlsClient extends Stream<Datagram> {
 /// Represents a [DtlsClient]'s connection to a peer.
 ///
 /// Can be used to [send] data to the peer.
-class DtlsClientConnection implements DtlsConnection {
+class DtlsClientConnection extends Stream<Datagram> implements DtlsConnection {
   bool _closed = false;
 
   bool _connected = false;
@@ -436,6 +416,9 @@ class DtlsClientConnection implements DtlsConnection {
   final DtlsClient _dtlsClient;
 
   final Pointer<dtls_context_t> _context;
+
+  final _received = StreamController<Datagram>();
+  Stream<Datagram> get _receivedStream => _received.stream;
 
   final Pointer<session_t> _session;
 
@@ -488,7 +471,7 @@ class DtlsClientConnection implements DtlsConnection {
   }
 
   void _receive(Datagram data) {
-    _dtlsClient._received.sink.add(data);
+    _received.sink.add(data);
   }
 
   /// Closes this [DtlsClientConnection].
@@ -507,8 +490,23 @@ class DtlsClientConnection implements DtlsConnection {
 
     freeEdcsaStruct(_ecdsaKeyStruct);
     _dtlsEvents.close();
+    _received.close();
 
     _closed = true;
     _connected = false;
+  }
+
+  /// Listens for incoming application data that will be passed to the [onData]
+  /// handler as [Datagram]s.
+  ///
+  /// Data from all receiving connections will be passed to this callback.
+  ///
+  /// The [onError], [onDone], and [cancelOnError] parameters are passed to the
+  /// underlying [Stream], just as the [onData] handler.
+  @override
+  StreamSubscription<Datagram> listen(void Function(Datagram event)? onData,
+      {Function? onError, void Function()? onDone, bool? cancelOnError}) {
+    return _receivedStream.listen(onData,
+        onError: onError, onDone: onDone, cancelOnError: cancelOnError);
   }
 }
