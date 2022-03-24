@@ -7,39 +7,45 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:ffi';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:ffi/ffi.dart';
 
+import 'dtls_connection.dart';
 import 'ecdsa_keys.dart';
 import 'ffi/generated_bindings.dart';
 import 'library.dart';
 import 'types.dart';
 import 'util.dart';
 
+String _getConnectionKey(InternetAddress address, int port) {
+  return "${address.address}:$port";
+}
+
 int _handleWrite(Pointer<dtls_context_t> context, Pointer<session_t> session,
     Pointer<Uint8> dataAddress, int dataLength) {
   final data = dataAddress.asTypedList(dataLength).buffer.asUint8List();
   final address = addressFromSession(session);
   final port = portFromSession(session);
+  final connectionKey = _getConnectionKey(address, port);
 
-  final server = DtlsServer._servers[context.address];
-  return server?._sendInternal(data, address, port) ?? errorCode;
+  final connection = DtlsServerConnection._connections[connectionKey];
+  return connection?._sendInternal(data, address, port) ?? errorCode;
 }
 
 int _handleRead(Pointer<dtls_context_t> context, Pointer<session_t> session,
     Pointer<Uint8> dataAddress, int dataLength) {
-  final server = DtlsServer._servers[context.address];
+  final address = addressFromSession(session);
+  final port = portFromSession(session);
+  final connectionKey = _getConnectionKey(address, port);
+  final connection = DtlsServerConnection._connections[connectionKey];
 
-  if (server == null) {
+  if (connection == null) {
     return errorCode;
   }
 
   final data = dataAddress.asTypedList(dataLength);
-  final address = addressFromSession(session);
-  final port = portFromSession(session);
 
-  server._receive(Datagram(data, address, port), context, session);
+  connection._receive(Datagram(data, address, port));
 
   return dataLength;
 }
@@ -102,24 +108,29 @@ int _verifyEcdsaKey(Pointer<dtls_context_t> context, Pointer<session_t> session,
 /// Serves as a wrapper to tinyDTLS' server functionality.
 ///
 /// Allows you to [bind] the [DtlsServer] to a UDP port of your choice. Once a
-/// connection to a client is established, the server emits [DtlsServerEvent]s
-/// you can [listen] for.
+/// connection to a client is established, the server emits
+/// [DtlsServerConnection]s you can [listen] for.
 ///
-/// You can define multiple Pre-Shared Keys or an [EcdsaKeys] object that will be
-/// used by server to encrypt its communication with DTLS Clients.
-class DtlsServer extends Stream<DtlsServerEvent> {
+/// You can define multiple Pre-Shared Keys or an [EcdsaKeys] object that will
+/// be used by server to encrypt its communication with DTLS Clients.
+class DtlsServer extends Stream<DtlsServerConnection> {
   final TinyDTLS _tinyDtls;
 
   final RawDatagramSocket _socket;
 
   static final Map<int, DtlsServer> _servers = {};
 
+  final Map<String, DtlsServerConnection> _connections = {};
+
   final Map<String, Pointer<session_t>> _sessions = {};
 
   bool _externalSocket = true;
 
-  final _received = StreamController<DtlsServerEvent>();
-  Stream<DtlsServerEvent> get _receivedStream => _received.stream;
+  final _connectionStream = StreamController<DtlsServerConnection>();
+
+  Stream<DtlsServerConnection> get _receivedStream => _connectionStream.stream;
+
+  bool _closed = false;
 
   final Map<String, String> _keyStore = {};
 
@@ -185,11 +196,6 @@ class DtlsServer extends Stream<DtlsServerEvent> {
       .._externalSocket = false;
   }
 
-  void _receive(Datagram data, Pointer<dtls_context_t> context,
-      Pointer<session_t> session) {
-    _received.sink.add(DtlsServerEvent(data, this, context, session));
-  }
-
   void _startListening() {
     _servers[_context.address] = this;
 
@@ -232,15 +238,21 @@ class DtlsServer extends Stream<DtlsServerEvent> {
         final data = _socket.receive();
         if (data != null) {
           buffer.asTypedList(data.data.length).setAll(0, data.data);
+          final address = data.address;
+          final port = data.port;
+          final connectionKey = _getConnectionKey(address, port);
+
           final Pointer<session_t> session;
-          final address = data.address.address;
-          final storedSession = _sessions[address];
-          if (storedSession != null) {
-            session = storedSession;
+          final connection = _connections[connectionKey];
+
+          if (connection != null && !connection._closed) {
+            session = connection._session;
           } else {
-            session =
-                createSession(_tinyDtls, InternetAddress(address), data.port);
-            _sessions[address] = session;
+            session = createSession(_tinyDtls, data.address, port);
+            final connection =
+                DtlsServerConnection(this, session, _context, address, port);
+            _connections[connectionKey] = connection;
+            _connectionStream.add(connection);
           }
 
           _tinyDtls.dtls_handle_message(
@@ -269,44 +281,53 @@ class DtlsServer extends Stream<DtlsServerEvent> {
   /// [RawDatagramSocket]s that have been passed in by the user are only closed
   /// if [closeExternalSocket] is set to `true`.
   void close({bool closeExternalSocket = false}) {
-    _sessions
-      ..forEach((key, value) {
-        _tinyDtls
-          ..dtls_close(_context, value)
-          ..dtls_free_session(value);
-      })
-      ..clear();
+    if (_closed) {
+      return;
+    }
+
+    for (final connection in _connections.values) {
+      connection.close();
+    }
+    _connections.clear();
 
     _tinyDtls.dtls_free_context(_context);
 
     _servers.remove(_context.address);
     freeEdcsaStruct(_ecdsaKeyStruct);
-    _received.close();
+    _keyStore.clear();
+    _connectionStream.close();
 
     if (!_externalSocket || closeExternalSocket) {
       _socket.close();
     }
+
+    _closed = true;
   }
 
+  /// Listens for incoming [DtlsConnection]s.
+  ///
+  /// The [onError], [onDone], and [cancelOnError] parameters are passed to the
+  /// underlying [Stream], just as the [onData] handler.
   @override
-  StreamSubscription<DtlsServerEvent> listen(
-      void Function(DtlsServerEvent event)? onData,
+  StreamSubscription<DtlsServerConnection> listen(
+      void Function(DtlsServerConnection event)? onData,
       {Function? onError,
       void Function()? onDone,
       bool? cancelOnError}) {
     return _receivedStream.listen(onData,
         onError: onError, onDone: onDone, cancelOnError: cancelOnError);
   }
-
-  int _sendInternal(Uint8List data, InternetAddress address, int port) {
-    return _socket.send(data, address, port);
-  }
 }
 
 /// This Event is emitted if a [DtlsServer] receives application data.
-class DtlsServerEvent {
-  /// The received [Datagram] that triggered this [DtlsServerEvent].
-  final Datagram datagram;
+class DtlsServerConnection extends Stream<Datagram> implements DtlsConnection {
+  bool _connected = false;
+
+  bool _closed = false;
+
+  /// Whether this [DtlsServerConnection] is still connected.
+  @override
+  bool get connected => _connected;
 
   final DtlsServer _server;
 
@@ -314,12 +335,70 @@ class DtlsServerEvent {
 
   final Pointer<session_t> _session;
 
-  /// Constructor
-  DtlsServerEvent(this.datagram, this._server, this._context, this._session);
+  final _received = StreamController<Datagram>();
+  Stream<Datagram> get _receivedStream => _received.stream;
 
-  /// Sends [data] to the peer of the [DtlsServer] where this [DtlsServerEvent]
-  /// originated from.
-  int respond(List<int> data) {
+  final InternetAddress _address;
+
+  final int _port;
+
+  static final Map<String, DtlsServerConnection> _connections = {};
+
+  /// Constructor
+  DtlsServerConnection(
+      this._server, this._session, this._context, this._address, this._port) {
+    _connected = true;
+    final connectionKey = _getConnectionKey(_address, _port);
+    _connections[connectionKey] = this;
+  }
+
+  /// Sends [data] to the peer of the [DtlsServer] where this
+  /// [DtlsServerConnection] originated from.
+  @override
+  int send(List<int> data) {
+    if (!_connected) {
+      throw StateError("Sending failed: Not connected!");
+    }
     return _server._send(data, _context, _session);
+  }
+
+  @override
+  void close() {
+    if (_closed) {
+      return;
+    }
+
+    _server._tinyDtls
+      ..dtls_close(_context, _session)
+      ..dtls_free_session(_session);
+
+    _server._sessions.remove(_session.address);
+
+    _received.close();
+
+    _closed = true;
+    _connected = false;
+  }
+
+  /// Listens for incoming application data that will be passed to the [onData]
+  /// handler as [Datagram]s.
+  ///
+  /// Data from all receiving connections will be passed to this callback.
+  ///
+  /// The [onError], [onDone], and [cancelOnError] parameters are passed to the
+  /// underlying [Stream], just as the [onData] handler.
+  @override
+  StreamSubscription<Datagram> listen(void Function(Datagram event)? onData,
+      {Function? onError, void Function()? onDone, bool? cancelOnError}) {
+    return _receivedStream.listen(onData,
+        onError: onError, onDone: onDone, cancelOnError: cancelOnError);
+  }
+
+  void _receive(Datagram data) {
+    _received.sink.add(data);
+  }
+
+  int _sendInternal(List<int> data, InternetAddress address, int port) {
+    return _server._socket.send(data, address, port);
   }
 }
