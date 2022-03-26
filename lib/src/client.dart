@@ -12,6 +12,7 @@ import 'dart:typed_data';
 
 import 'package:ffi/ffi.dart';
 
+import 'dtls_connection.dart';
 import 'dtls_event.dart';
 import 'ecdsa_keys.dart';
 import 'ffi/generated_bindings.dart';
@@ -26,13 +27,13 @@ int _handleWrite(Pointer<dtls_context_t> context, Pointer<session_t> session,
   final address = addressFromSession(session);
   final port = portFromSession(session);
 
-  final connection = DtlsConnection._connections[context.address];
+  final connection = DtlsClientConnection._connections[context.address];
   return connection?._sendInternal(data, address, port) ?? errorCode;
 }
 
 int _handleRead(Pointer<dtls_context_t> context, Pointer<session_t> session,
     Pointer<ffi.Uint8> dataAddress, int dataLength) {
-  final connection = DtlsConnection._connections[context.address];
+  final connection = DtlsClientConnection._connections[context.address];
 
   if (connection == null) {
     return errorCode;
@@ -49,7 +50,7 @@ int _handleRead(Pointer<dtls_context_t> context, Pointer<session_t> session,
 
 int _handleEvent(Pointer<dtls_context_t> context, Pointer<session_t> session,
     int level, int code) {
-  final connection = DtlsConnection._connections[context.address];
+  final connection = DtlsClientConnection._connections[context.address];
 
   if (connection == null) {
     return errorCode;
@@ -73,7 +74,7 @@ int _retrievePskInfo(
   Pointer<ffi.Uint8> result,
   int resultLength,
 ) {
-  final connection = DtlsConnection._connections[context.address];
+  final connection = DtlsClientConnection._connections[context.address];
 
   if (connection == null) {
     return errorCode;
@@ -115,7 +116,7 @@ int _retrieveEcdsaInfo(
     Pointer<dtls_context_t> context,
     Pointer<session_t> session,
     ffi.Pointer<ffi.Pointer<dtls_ecdsa_key_t>> key) {
-  final connection = DtlsConnection._connections[context.address];
+  final connection = DtlsClientConnection._connections[context.address];
 
   if (connection == null) {
     return errorCode;
@@ -152,7 +153,7 @@ int _verifyEcdsaKey(
 ///
 /// Closing the [DtlsClient] with the [close] method also closes all existing
 /// [DtlsConnection]s.
-class DtlsClient extends Stream<Datagram> {
+class DtlsClient {
   final TinyDTLS _tinyDtls;
 
   bool _closed = false;
@@ -161,10 +162,7 @@ class DtlsClient extends Stream<Datagram> {
 
   final RawDatagramSocket _socket;
 
-  final _received = StreamController<Datagram>();
-  Stream<Datagram> get _receivedStream => _received.stream;
-
-  final Map<String, DtlsConnection> _connections = {};
+  final Map<String, DtlsClientConnection> _connections = {};
 
   bool _externalSocket = true;
 
@@ -200,21 +198,6 @@ class DtlsClient extends Stream<Datagram> {
     return DtlsClient(socket,
         maxTimeoutSeconds: maxTimeoutSeconds, tinyDTLS: tinyDtls)
       .._externalSocket = false;
-  }
-
-  /// Listens for incoming application data that will be passed to the [onData]
-  /// handler as [Datagram]s.
-  ///
-  /// Data from all receiving connections will be passed to this callback.
-  ///
-  /// The [onError], [onDone], and [cancelOnError] parameters are passed to the
-  /// underlying [Stream], just as the [onData] handler.
-  // TODO(JKRhb): Consider returning a custom event class instead.
-  @override
-  StreamSubscription<Datagram> listen(void Function(Datagram event)? onData,
-      {Function? onError, void Function()? onDone, bool? cancelOnError}) {
-    return _receivedStream.listen(onData,
-        onError: onError, onDone: onDone, cancelOnError: cancelOnError);
   }
 
   Pointer<dtls_context_t> _createContext(
@@ -264,7 +247,7 @@ class DtlsClient extends Stream<Datagram> {
     return context;
   }
 
-  void _checkConnectionStatus(DtlsConnection connection) {
+  void _checkConnectionStatus(DtlsClientConnection connection) {
     final session = connection._session;
     final context = connection._context;
 
@@ -298,8 +281,8 @@ class DtlsClient extends Stream<Datagram> {
     });
   }
 
-  /// Establishes a [DtlsConnection] with a peer using the given [address] and
-  /// [port].
+  /// Establishes a [DtlsClientConnection] with a peer using the given [address]
+  /// and [port].
   ///
   /// Either [pskCredentials] or [ecdsaKeys], or both can be provided (in this
   /// case the peer will be offered both a PSK and an ECC cipher during the
@@ -321,7 +304,7 @@ class DtlsClient extends Stream<Datagram> {
 
     final key = "${address.host}:$port";
     final existingConnection = _connections[key];
-    if (existingConnection != null) {
+    if (existingConnection != null && !existingConnection._closed) {
       return existingConnection;
     }
 
@@ -329,7 +312,7 @@ class DtlsClient extends Stream<Datagram> {
         hasPsk: pskCredentials != null, hasEcdsaKey: ecdsaKeys != null);
     final session = createSession(_tinyDtls, address, port);
 
-    final connection = DtlsConnection(this, session, context,
+    final connection = DtlsClientConnection(this, session, context,
         pskCredentials: pskCredentials,
         ecdsaKeys: ecdsaKeys,
         eventListener: eventListener);
@@ -347,7 +330,7 @@ class DtlsClient extends Stream<Datagram> {
     return connection._connectCompleter.future;
   }
 
-  void _completeTimeout(DtlsConnection connection) {
+  void _completeTimeout(DtlsClientConnection connection) {
     final completer = connection._connectCompleter;
     if (!completer.isCompleted) {
       completer.completeError(TimeoutException("Connecting to peer failed!"));
@@ -355,7 +338,7 @@ class DtlsClient extends Stream<Datagram> {
   }
 
   void _createTimeout(
-      DtlsConnection connection, Pointer<dtls_context_t> context,
+      DtlsClientConnection connection, Pointer<dtls_context_t> context,
       [int timeoutCount = 0, int timeoutSeconds = 1]) {
     if (timeoutSeconds < _maxTimeoutSeconds) {
       connection._connectionTimeout = Timer(
@@ -367,7 +350,7 @@ class DtlsClient extends Stream<Datagram> {
     }
   }
 
-  void _handleTimeout(DtlsConnection connection,
+  void _handleTimeout(DtlsClientConnection connection,
       Pointer<dtls_context_t> context, int timeoutCount, int timeoutSeconds) {
     if (connection._closed || connection._connected) {
       return _completeTimeout(connection);
@@ -414,8 +397,6 @@ class DtlsClient extends Stream<Datagram> {
       _socket.close();
     }
 
-    _received.close();
-
     _closed = true;
   }
 }
@@ -423,21 +404,25 @@ class DtlsClient extends Stream<Datagram> {
 /// Represents a [DtlsClient]'s connection to a peer.
 ///
 /// Can be used to [send] data to the peer.
-class DtlsConnection {
+class DtlsClientConnection extends Stream<Datagram> implements DtlsConnection {
   bool _closed = false;
 
   bool _connected = false;
 
-  /// Whether this [DtlsConnection] is still connected.
+  /// Whether this [DtlsClientConnection] is still connected.
+  @override
   bool get connected => _connected;
 
   final DtlsClient _dtlsClient;
 
   final Pointer<dtls_context_t> _context;
 
+  final _received = StreamController<Datagram>();
+  Stream<Datagram> get _receivedStream => _received.stream;
+
   final Pointer<session_t> _session;
 
-  static final Map<int, DtlsConnection> _connections = {};
+  static final Map<int, DtlsClientConnection> _connections = {};
 
   final PskCredentials? _pskCredential;
 
@@ -448,10 +433,10 @@ class DtlsConnection {
   final _dtlsEvents = StreamController<DtlsEvent>();
   Stream<DtlsEvent> get _eventStream => _dtlsEvents.stream;
 
-  final Completer<DtlsConnection> _connectCompleter = Completer();
+  final Completer<DtlsClientConnection> _connectCompleter = Completer();
 
   /// Constructor
-  DtlsConnection(this._dtlsClient, this._session, this._context,
+  DtlsClientConnection(this._dtlsClient, this._session, this._context,
       {PskCredentials? pskCredentials,
       EcdsaKeys? ecdsaKeys,
       void Function(DtlsEvent event)? eventListener})
@@ -469,10 +454,11 @@ class DtlsConnection {
     _dtlsEvents.sink.add(event);
   }
 
-  /// Sends [data] to the endpoint of this [DtlsConnection].
+  /// Sends [data] to the endpoint of this [DtlsClientConnection].
   ///
   /// Returns the number of bytes written. A [StateError] is thrown if the
   /// [DtlsClient] is not connected to the peer anymore.
+  @override
   int send(List<int> data) {
     if (!_connected) {
       throw StateError("Sending failed: Not connected!");
@@ -485,10 +471,11 @@ class DtlsConnection {
   }
 
   void _receive(Datagram data) {
-    _dtlsClient._received.sink.add(data);
+    _received.sink.add(data);
   }
 
-  /// Closes this [DtlsConnection].
+  /// Closes this [DtlsClientConnection].
+  @override
   void close() {
     if (_closed) {
       return;
@@ -503,8 +490,23 @@ class DtlsConnection {
 
     freeEdcsaStruct(_ecdsaKeyStruct);
     _dtlsEvents.close();
+    _received.close();
 
     _closed = true;
     _connected = false;
+  }
+
+  /// Listens for incoming application data that will be passed to the [onData]
+  /// handler as [Datagram]s.
+  ///
+  /// Data from all receiving connections will be passed to this callback.
+  ///
+  /// The [onError], [onDone], and [cancelOnError] parameters are passed to the
+  /// underlying [Stream], just as the [onData] handler.
+  @override
+  StreamSubscription<Datagram> listen(void Function(Datagram event)? onData,
+      {Function? onError, void Function()? onDone, bool? cancelOnError}) {
+    return _receivedStream.listen(onData,
+        onError: onError, onDone: onDone, cancelOnError: cancelOnError);
   }
 }

@@ -46,22 +46,24 @@ void main() {
       final server = await DtlsServer.bind(bindAddress, port,
           keyStore: {identity: preSharedKey});
 
-      server.listen(((event) {
-        expect(utf8.decode(event.datagram.data), clientMessage);
-        event.respond(utf8.encode(serverMessage));
+      server.listen(((connection) {
+        connection.listen((event) {
+          expect(utf8.decode(event.data), clientMessage);
+          connection.send(utf8.encode(serverMessage));
+        });
       }));
-
-      client.listen((event) {
-        expect(utf8.decode(event.data), serverMessage);
-
-        server.close();
-        client.close();
-      });
 
       final connection = await client.connect(InternetAddress(address), port,
           pskCredentials: PskCredentials(identity, preSharedKey));
 
-      connection.send(utf8.encode(clientMessage));
+      connection
+        ..listen((event) {
+          expect(utf8.decode(event.data), serverMessage);
+
+          server.close();
+          client.close();
+        })
+        ..send(utf8.encode(clientMessage));
     });
   });
 }
