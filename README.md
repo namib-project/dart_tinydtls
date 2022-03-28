@@ -3,6 +3,43 @@
 Dart ffi bindings to the tinydtls library.
 Provides wrappers for both a DTLS client and server.
 
+## Using the wrapper classes
+
+The library provides a high level API for accessing tinyDTLS functionality.
+Both client and server APIs are exposed through the `DtlsClient` and `DtlsServer`
+classes. These allow users to connect to a peer or wait for incoming connections,
+respectively.
+
+A basic example for the use of the `DtlsClient` class can be seen below. As tinyDTLS
+only supports ciphers using either a Pre-Shared Key (PSK) or an ECDSA key, at least
+one of these types of credentials have to be provided (in this case, a PSK).
+
+Once the connection has been established, a `DtlsConnection` object is returned which
+can be used for sending data to the peer. The `DtlsConnection` also allows listening
+for incoming application data (in the form of `Datagram` objects). This and other
+use cases are demonstrated more thoroughly in the `example.dart` file.
+
+```dart
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:dart_tinydtls/dart_tinydtls.dart';
+
+Future<void> main() async {
+  const address = "fe80::abcd:ef00";
+  const port = 5684;
+  final pskCredentials = PskCredentials("Client_identity", "secretPSK");
+
+  final client = await DtlsClient.bind(InternetAddress.anyIPv6, 0);
+  final connection = await client.connect(InternetAddress(address), port,
+      pskCredentials: pskCredentials);
+
+  final data = utf8.encode('Hello World!');
+  connection.send(data);
+  client.close();
+}
+```
+
 ## Generating the bindings
 
 1. Clone the repository and initialize its submodules
