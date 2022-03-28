@@ -1,3 +1,8 @@
+## 0.3.0
+
+- Reworked server API using a generic DtlsConnection interface
+- Improved documentation
+
 ## 0.2.1
 
 - Expanded package description in pubspec.yaml
