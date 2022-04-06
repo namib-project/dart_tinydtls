@@ -19,8 +19,7 @@ ffigen:
   name: TinyDTLS
   description: ffi binding to the tinydtls library.
   output: 'lib/src/ffi/generated_bindings.dart'
-  # NOTE: This directory may be different depending on your system.
-  compiler-opts: '-I/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/include -I./third_party/tinydtls'
+  compiler-opts: '-I./third_party/tinydtls'
   headers:
     entry-points:
       - 'third_party/tinydtls/dtls.h'
