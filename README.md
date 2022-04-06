@@ -45,14 +45,35 @@ Future<void> main() async {
 1. Clone the repository and initialize its submodules
    (i.e. `git submodule update --init --recursive`).
 2. Generate the bindings using `dart run ffigen`.
-   - You may need to change the `compiler-opts` option in `pubspec.yaml` to match your system's
-     location of corresponding header files for `stddef.h` and so on.
+   - If you encounter a `SEVERE` error regarding a missing header file (e.g. `stddef.h`),
+     please consult the *Troubleshooting* section below.
 3. There are exactly two warnings which can be ignored:
     1. `Removed All Struct Members from dtls_handshake_parameters_t(dtls_handshake_parameters_t), Bit Field members not supported.`
        - The struct `dtls_handshake_parameters_t` won't be used by library clients, so the
          fact that it's opaque in the bindings can safely be ignored.
     2. `Generated declaration '__socklen_t' start's with '_' and therefore will be private.`
         - Similarly, it won't cause any problems for `__socklen_t` to be private.
+
+## Troubleshooting
+
+### `stddef.h` (or other header) file not found
+It may be that you'll encounter the following error (maybe with another header 
+file in place of `stddef.h`) when generating the bindings using `dart run ffigen`:
+```
+[SEVERE] : Header third_party/tinydtls/dtls.h: Total errors/warnings: 1.
+[SEVERE] :     /usr/include/sys/types.h:144:10: fatal error: 'stddef.h' file not found [Lexical or Preprocessor Issue]
+```
+To fix this, `ffigen` needs to know where it can find this header file using the 
+`CPATH` environment variable, which should point to the location of the header files.
+To set this environment variable automatically by detecting the location using `clang`, 
+run the following command[^cpath]:
+```bash
+export CPATH="$(clang -v 2>&1 | grep "Selected GCC installation" | rev | cut -d' ' -f1 | rev)/include"
+```
+Simply execute this before running `dart run ffigen` and the headers should be correctly detected.
+
+[^cpath]: From [this GitHub comment](https://github.com/dart-lang/ffigen/issues/257#issuecomment-1061788936). 
+          Of course, you can also set the path manually.
 
 ## License
 
