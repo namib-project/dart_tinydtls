@@ -11,6 +11,7 @@ import 'dart:io';
 import 'package:ffi/ffi.dart';
 
 import 'dtls_connection.dart';
+import 'dtls_event.dart';
 import 'ecdsa_keys.dart';
 import 'ffi/generated_bindings.dart';
 import 'library.dart';
@@ -49,6 +50,23 @@ int _handleRead(Pointer<dtls_context_t> context, Pointer<session_t> session,
   connection._receive(Datagram(data, address, port));
 
   return dataLength;
+}
+
+int _handleEvent(Pointer<dtls_context_t> context, Pointer<session_t> session,
+    int level, int code) {
+  final connection = _serverConnectionFromSession(session);
+
+  if (connection == null) {
+    return errorCode;
+  }
+
+  final dtlsEvent = eventFromCode(code);
+
+  if (dtlsEvent != null) {
+    connection._handleDtlsEvent(dtlsEvent);
+  }
+
+  return success;
 }
 
 int _retrievePskInfo(
@@ -204,6 +222,8 @@ class DtlsServer extends Stream<DtlsServerConnection> {
         Pointer.fromFunction(_handleRead, errorCode);
     final Pointer<NativeFunction<NativeWriteHandler>> writeHandler =
         Pointer.fromFunction(_handleWrite, errorCode);
+    final Pointer<NativeFunction<NativeEventHandler>> eventHandler =
+        Pointer.fromFunction(_handleEvent, errorCode);
 
     final Pointer<NativeFunction<NativePskHandler>> pskHandler;
 
@@ -228,7 +248,7 @@ class DtlsServer extends Stream<DtlsServerConnection> {
     final handlers = malloc<dtls_handler_t>();
     handlers.ref.read = readHandler;
     handlers.ref.write = writeHandler;
-    handlers.ref.event = nullptr;
+    handlers.ref.event = eventHandler;
     handlers.ref.get_psk_info = pskHandler;
     handlers.ref.get_ecdsa_key = ecdsaHandler;
     handlers.ref.verify_ecdsa_key = verifyEcdsaHandler;
@@ -287,7 +307,7 @@ class DtlsServer extends Stream<DtlsServerConnection> {
     }
 
     for (final connection in _connections.values) {
-      connection.close();
+      connection.close(closedByServer: true);
     }
     _connections.clear();
 
@@ -353,6 +373,12 @@ class DtlsServerConnection extends Stream<Datagram> implements DtlsConnection {
     _connections[connectionKey] = this;
   }
 
+  void _handleDtlsEvent(DtlsEvent event) {
+    if (event == DtlsEvent.dtlsEventCloseNotify) {
+      close(freeResources: false);
+    }
+  }
+
   /// Sends [data] to the peer of the [DtlsServer] where this
   /// [DtlsServerConnection] originated from.
   @override
@@ -364,16 +390,28 @@ class DtlsServerConnection extends Stream<Datagram> implements DtlsConnection {
   }
 
   @override
-  void close() {
+  void close({bool freeResources = true, bool closedByServer = false}) {
     if (_closed) {
       return;
     }
 
-    _server._tinyDtls
-      ..dtls_close(_context, _session)
-      ..dtls_free_session(_session);
+    if (freeResources) {
+      // Here, the closing of the connection has been triggered by the user, so
+      // the resources need to be cleaned up "manually". Otherwise, the
+      // connection has been closed by the peer and this step is handled by
+      // tinyDTLS.
+      _server._tinyDtls
+        ..dtls_close(_context, _session)
+        ..dtls_free_session(_session);
+    }
 
     _server._sessions.remove(_session.address);
+
+    if (!closedByServer) {
+      // This distinction is made to avoid concurrent modification errors.
+      final connectionKey = getConnectionKey(_address, _port);
+      _server._connections.remove(connectionKey);
+    }
 
     _received.close();
 
