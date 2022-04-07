@@ -302,7 +302,7 @@ class DtlsClient {
       throw ArgumentError("No DTLS client credentials have been provided.");
     }
 
-    final key = "${address.host}:$port";
+    final key = getConnectionKey(address, port);
     final existingConnection = _connections[key];
     if (existingConnection != null && !existingConnection._closed) {
       return existingConnection;

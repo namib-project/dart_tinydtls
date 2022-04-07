@@ -17,16 +17,12 @@ import 'library.dart';
 import 'types.dart';
 import 'util.dart';
 
-String _getConnectionKey(InternetAddress address, int port) {
-  return "${address.address}:$port";
-}
-
 int _handleWrite(Pointer<dtls_context_t> context, Pointer<session_t> session,
     Pointer<Uint8> dataAddress, int dataLength) {
   final data = dataAddress.asTypedList(dataLength).buffer.asUint8List();
   final address = addressFromSession(session);
   final port = portFromSession(session);
-  final connectionKey = _getConnectionKey(address, port);
+  final connectionKey = getConnectionKey(address, port);
 
   final connection = DtlsServerConnection._connections[connectionKey];
   return connection?._sendInternal(data, address, port) ?? errorCode;
@@ -36,7 +32,7 @@ int _handleRead(Pointer<dtls_context_t> context, Pointer<session_t> session,
     Pointer<Uint8> dataAddress, int dataLength) {
   final address = addressFromSession(session);
   final port = portFromSession(session);
-  final connectionKey = _getConnectionKey(address, port);
+  final connectionKey = getConnectionKey(address, port);
   final connection = DtlsServerConnection._connections[connectionKey];
 
   if (connection == null) {
@@ -240,7 +236,7 @@ class DtlsServer extends Stream<DtlsServerConnection> {
           buffer.asTypedList(data.data.length).setAll(0, data.data);
           final address = data.address;
           final port = data.port;
-          final connectionKey = _getConnectionKey(address, port);
+          final connectionKey = getConnectionKey(address, port);
 
           final Pointer<session_t> session;
           final connection = _connections[connectionKey];
@@ -348,7 +344,7 @@ class DtlsServerConnection extends Stream<Datagram> implements DtlsConnection {
   DtlsServerConnection(
       this._server, this._session, this._context, this._address, this._port) {
     _connected = true;
-    final connectionKey = _getConnectionKey(_address, _port);
+    final connectionKey = getConnectionKey(_address, _port);
     _connections[connectionKey] = this;
   }
 
