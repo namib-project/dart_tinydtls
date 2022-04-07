@@ -8,6 +8,9 @@ import 'ffi/generated_bindings.dart';
 /// Events that are being signalled by tinyDTLS during and after the
 /// connection establishment.
 enum DtlsEvent {
+  /// Occurs when the peer has closed the connection.
+  dtlsEventCloseNotify,
+
   /// Occurs when the Client is trying to connect to the peer.
   dtlsEventConnect,
 
@@ -23,6 +26,8 @@ enum DtlsEvent {
 /// Returns `null` if the [eventCode] is unknown.
 DtlsEvent? eventFromCode(int eventCode) {
   switch (eventCode) {
+    case dtls_alert_t.DTLS_ALERT_CLOSE_NOTIFY:
+      return DtlsEvent.dtlsEventCloseNotify;
     case DTLS_EVENT_CONNECT:
       return DtlsEvent.dtlsEventConnect;
     case DTLS_EVENT_CONNECTED:

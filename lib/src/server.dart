@@ -11,14 +11,18 @@ import 'dart:io';
 import 'package:ffi/ffi.dart';
 
 import 'dtls_connection.dart';
+import 'dtls_event.dart';
 import 'ecdsa_keys.dart';
 import 'ffi/generated_bindings.dart';
 import 'library.dart';
 import 'types.dart';
 import 'util.dart';
 
-String _getConnectionKey(InternetAddress address, int port) {
-  return "${address.address}:$port";
+DtlsServerConnection? _serverConnectionFromSession(Pointer<session_t> session) {
+  final address = addressFromSession(session);
+  final port = portFromSession(session);
+  final connectionKey = getConnectionKey(address, port);
+  return DtlsServerConnection._connections[connectionKey];
 }
 
 int _handleWrite(Pointer<dtls_context_t> context, Pointer<session_t> session,
@@ -26,9 +30,8 @@ int _handleWrite(Pointer<dtls_context_t> context, Pointer<session_t> session,
   final data = dataAddress.asTypedList(dataLength).buffer.asUint8List();
   final address = addressFromSession(session);
   final port = portFromSession(session);
-  final connectionKey = _getConnectionKey(address, port);
+  final connection = _serverConnectionFromSession(session);
 
-  final connection = DtlsServerConnection._connections[connectionKey];
   return connection?._sendInternal(data, address, port) ?? errorCode;
 }
 
@@ -36,8 +39,7 @@ int _handleRead(Pointer<dtls_context_t> context, Pointer<session_t> session,
     Pointer<Uint8> dataAddress, int dataLength) {
   final address = addressFromSession(session);
   final port = portFromSession(session);
-  final connectionKey = _getConnectionKey(address, port);
-  final connection = DtlsServerConnection._connections[connectionKey];
+  final connection = _serverConnectionFromSession(session);
 
   if (connection == null) {
     return errorCode;
@@ -48,6 +50,23 @@ int _handleRead(Pointer<dtls_context_t> context, Pointer<session_t> session,
   connection._receive(Datagram(data, address, port));
 
   return dataLength;
+}
+
+int _handleEvent(Pointer<dtls_context_t> context, Pointer<session_t> session,
+    int level, int code) {
+  final connection = _serverConnectionFromSession(session);
+
+  if (connection == null) {
+    return errorCode;
+  }
+
+  final dtlsEvent = eventFromCode(code);
+
+  if (dtlsEvent != null) {
+    connection._handleDtlsEvent(dtlsEvent);
+  }
+
+  return success;
 }
 
 int _retrievePskInfo(
@@ -203,6 +222,8 @@ class DtlsServer extends Stream<DtlsServerConnection> {
         Pointer.fromFunction(_handleRead, errorCode);
     final Pointer<NativeFunction<NativeWriteHandler>> writeHandler =
         Pointer.fromFunction(_handleWrite, errorCode);
+    final Pointer<NativeFunction<NativeEventHandler>> eventHandler =
+        Pointer.fromFunction(_handleEvent, errorCode);
 
     final Pointer<NativeFunction<NativePskHandler>> pskHandler;
 
@@ -227,7 +248,7 @@ class DtlsServer extends Stream<DtlsServerConnection> {
     final handlers = malloc<dtls_handler_t>();
     handlers.ref.read = readHandler;
     handlers.ref.write = writeHandler;
-    handlers.ref.event = nullptr;
+    handlers.ref.event = eventHandler;
     handlers.ref.get_psk_info = pskHandler;
     handlers.ref.get_ecdsa_key = ecdsaHandler;
     handlers.ref.verify_ecdsa_key = verifyEcdsaHandler;
@@ -240,7 +261,7 @@ class DtlsServer extends Stream<DtlsServerConnection> {
           buffer.asTypedList(data.data.length).setAll(0, data.data);
           final address = data.address;
           final port = data.port;
-          final connectionKey = _getConnectionKey(address, port);
+          final connectionKey = getConnectionKey(address, port);
 
           final Pointer<session_t> session;
           final connection = _connections[connectionKey];
@@ -286,7 +307,7 @@ class DtlsServer extends Stream<DtlsServerConnection> {
     }
 
     for (final connection in _connections.values) {
-      connection.close();
+      connection.close(closedByServer: true);
     }
     _connections.clear();
 
@@ -348,8 +369,14 @@ class DtlsServerConnection extends Stream<Datagram> implements DtlsConnection {
   DtlsServerConnection(
       this._server, this._session, this._context, this._address, this._port) {
     _connected = true;
-    final connectionKey = _getConnectionKey(_address, _port);
+    final connectionKey = getConnectionKey(_address, _port);
     _connections[connectionKey] = this;
+  }
+
+  void _handleDtlsEvent(DtlsEvent event) {
+    if (event == DtlsEvent.dtlsEventCloseNotify) {
+      close(freeResources: false);
+    }
   }
 
   /// Sends [data] to the peer of the [DtlsServer] where this
@@ -363,16 +390,28 @@ class DtlsServerConnection extends Stream<Datagram> implements DtlsConnection {
   }
 
   @override
-  void close() {
+  void close({bool freeResources = true, bool closedByServer = false}) {
     if (_closed) {
       return;
     }
 
-    _server._tinyDtls
-      ..dtls_close(_context, _session)
-      ..dtls_free_session(_session);
+    if (freeResources) {
+      // Here, the closing of the connection has been triggered by the user, so
+      // the resources need to be cleaned up "manually". Otherwise, the
+      // connection has been closed by the peer and this step is handled by
+      // tinyDTLS.
+      _server._tinyDtls
+        ..dtls_close(_context, _session)
+        ..dtls_free_session(_session);
+    }
 
     _server._sessions.remove(_session.address);
+
+    if (!closedByServer) {
+      // This distinction is made to avoid concurrent modification errors.
+      final connectionKey = getConnectionKey(_address, _port);
+      _server._connections.remove(connectionKey);
+    }
 
     _received.close();
 

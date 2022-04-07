@@ -26,10 +26,15 @@ Future<void> main() async {
   final server = await DtlsServer.bind(InternetAddress.anyIPv6, 5684,
       keyStore: {"Client_identity": "secretPSK"}, ecdsaKeys: _getKeys());
   server.listen((connection) {
-    connection.listen((event) {
-      print(utf8.decode(event.data));
-      connection.send(utf8.encode("Hello from world!"));
-    });
+    connection.listen(
+      (event) {
+        print(utf8.decode(event.data));
+        connection.send(utf8.encode("Hello from world!"));
+      },
+      onDone: () {
+        print("Server connection closed.");
+      },
+    );
   });
   final client = await DtlsClient.bind(InternetAddress.anyIPv6, 0);
 
@@ -39,14 +44,18 @@ Future<void> main() async {
 
   final connection = await client.connect(InternetAddress(address), port,
       pskCredentials: pskCredentials,
-      ecdsaKeys: _getKeys(),
-      eventListener: print);
+      ecdsaKeys: _getKeys(), eventListener: (event) {
+    print(event);
+    if (event == DtlsEvent.dtlsEventCloseNotify) {
+      print("Closing the client");
+      client.close();
+    }
+  });
   connection
     ..listen((event) {
       print(utf8.decode(event.data));
       if (++responses >= 2) {
         server.close();
-        client.close();
       }
     })
     ..send(utf8.encode('Hello World!'))
