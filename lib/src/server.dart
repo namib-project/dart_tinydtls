@@ -17,14 +17,20 @@ import 'library.dart';
 import 'types.dart';
 import 'util.dart';
 
+DtlsServerConnection? _serverConnectionFromSession(Pointer<session_t> session) {
+  final address = addressFromSession(session);
+  final port = portFromSession(session);
+  final connectionKey = getConnectionKey(address, port);
+  return DtlsServerConnection._connections[connectionKey];
+}
+
 int _handleWrite(Pointer<dtls_context_t> context, Pointer<session_t> session,
     Pointer<Uint8> dataAddress, int dataLength) {
   final data = dataAddress.asTypedList(dataLength).buffer.asUint8List();
   final address = addressFromSession(session);
   final port = portFromSession(session);
-  final connectionKey = getConnectionKey(address, port);
+  final connection = _serverConnectionFromSession(session);
 
-  final connection = DtlsServerConnection._connections[connectionKey];
   return connection?._sendInternal(data, address, port) ?? errorCode;
 }
 
@@ -32,8 +38,7 @@ int _handleRead(Pointer<dtls_context_t> context, Pointer<session_t> session,
     Pointer<Uint8> dataAddress, int dataLength) {
   final address = addressFromSession(session);
   final port = portFromSession(session);
-  final connectionKey = getConnectionKey(address, port);
-  final connection = DtlsServerConnection._connections[connectionKey];
+  final connection = _serverConnectionFromSession(session);
 
   if (connection == null) {
     return errorCode;
