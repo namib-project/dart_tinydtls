@@ -255,7 +255,7 @@ class DtlsClient {
 
     final peer = _tinyDtls.dtls_get_peer(context, session);
     if (peer == nullptr) {
-      connection.close();
+      connection.close(closedByClient: true);
     } else if (!connection._connected &&
         peer.ref.state == dtls_state_t.DTLS_STATE_CONNECTED) {
       connection._connected = true;
@@ -312,7 +312,8 @@ class DtlsClient {
         hasPsk: pskCredentials != null, hasEcdsaKey: ecdsaKeys != null);
     final session = createSession(_tinyDtls, address, port);
 
-    final connection = DtlsClientConnection(this, session, context,
+    final connection = DtlsClientConnection(
+        this, session, context, address, port,
         pskCredentials: pskCredentials,
         ecdsaKeys: ecdsaKeys,
         eventListener: eventListener);
@@ -389,7 +390,7 @@ class DtlsClient {
     }
 
     for (final connection in _connections.values) {
-      connection.close();
+      connection.close(closedByClient: true);
     }
 
     _connections.clear();
@@ -408,6 +409,10 @@ class DtlsClientConnection extends Stream<Datagram> implements DtlsConnection {
   bool _closed = false;
 
   bool _connected = false;
+
+  final InternetAddress _address;
+
+  final int _port;
 
   /// Whether this [DtlsClientConnection] is still connected.
   @override
@@ -436,7 +441,8 @@ class DtlsClientConnection extends Stream<Datagram> implements DtlsConnection {
   final Completer<DtlsClientConnection> _connectCompleter = Completer();
 
   /// Constructor
-  DtlsClientConnection(this._dtlsClient, this._session, this._context,
+  DtlsClientConnection(
+      this._dtlsClient, this._session, this._context, this._address, this._port,
       {PskCredentials? pskCredentials,
       EcdsaKeys? ecdsaKeys,
       void Function(DtlsEvent event)? eventListener})
@@ -452,6 +458,9 @@ class DtlsClientConnection extends Stream<Datagram> implements DtlsConnection {
 
   void _emitDtlsEvent(DtlsEvent event) {
     _dtlsEvents.sink.add(event);
+    if (event == DtlsEvent.dtlsEventCloseNotify) {
+      close(freeResources: false);
+    }
   }
 
   /// Sends [data] to the endpoint of this [DtlsClientConnection].
@@ -476,17 +485,28 @@ class DtlsClientConnection extends Stream<Datagram> implements DtlsConnection {
 
   /// Closes this [DtlsClientConnection].
   @override
-  void close() {
+  void close({bool freeResources = true, bool closedByClient = false}) {
     if (_closed) {
       return;
     }
 
-    _dtlsClient._tinyDtls
-      ..dtls_close(_context, _session)
-      ..dtls_free_context(_context)
-      ..dtls_free_session(_session);
+    if (freeResources) {
+      // Here, the closing of the connection has been triggered by the user, so
+      // the resources need to be cleaned up "manually". Otherwise, the
+      // connection has been closed by the peer and this step is handled by
+      // tinyDTLS.
+      _dtlsClient._tinyDtls
+        ..dtls_close(_context, _session)
+        ..dtls_free_context(_context)
+        ..dtls_free_session(_session);
+    }
 
     _connections.remove(_context.address);
+
+    if (!closedByClient) {
+      // This distinction is made to avoid concurrent modification errors.
+      _dtlsClient._connections.remove(_context.address);
+    }
 
     freeEdcsaStruct(_ecdsaKeyStruct);
     _dtlsEvents.close();
