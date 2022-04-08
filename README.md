@@ -1,3 +1,7 @@
+[![pub package](https://img.shields.io/pub/v/dart_tinydtls.svg)](https://pub.dev/packages/dart_tinydtls)
+[![Build](https://github.com/namib-project/dart_tinydtls/actions/workflows/ci.yml/badge.svg)](https://github.com/namib-project/dart_tinydtls/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/namib-project/dart_tinydtls/branch/main/graph/badge.svg?token=76OBNOVL60)](https://codecov.io/gh/namib-project/dart_tinydtls)
+
 # dart_tinydtls
 
 Dart ffi bindings to the tinydtls library.
