@@ -1,3 +1,7 @@
+## 0.4.1
+
+- Applied minor refactorings and style changes
+
 ## 0.4.0
 
 - The `DtlsClient` and `DtlsServer` should now handle connections closed by the peer correctly
