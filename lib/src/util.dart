@@ -174,7 +174,8 @@ int createFatalError(int description) {
   return -((dtls_alert_level_t.DTLS_ALERT_LEVEL_FATAL << 8) | description);
 }
 
-/// Creates a string key from an [address] and [port] intended for caching a connection.
+/// Creates a string key from an [address] and [port] intended for caching a
+/// connection.
 String getConnectionKey(InternetAddress address, int port) {
   return "${address.address}:$port";
 }
