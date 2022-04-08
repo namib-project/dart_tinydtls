@@ -1,3 +1,8 @@
+## 0.4.0
+
+- The `DtlsClient` and `DtlsServer` should now handle connections closed by the peer correctly
+- When generating bindings, `CPATH` is now used in place of `-I` compiler option to find headers
+
 ## 0.3.0
 
 - Reworked server API using a generic DtlsConnection interface
