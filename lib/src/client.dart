@@ -312,8 +312,7 @@ class DtlsClient {
         hasPsk: pskCredentials != null, hasEcdsaKey: ecdsaKeys != null);
     final session = createSession(_tinyDtls, address, port);
 
-    final connection = DtlsClientConnection(
-        this, session, context, address, port,
+    final connection = DtlsClientConnection(this, session, context,
         pskCredentials: pskCredentials,
         ecdsaKeys: ecdsaKeys,
         eventListener: eventListener);
@@ -410,10 +409,6 @@ class DtlsClientConnection extends Stream<Datagram> implements DtlsConnection {
 
   bool _connected = false;
 
-  final InternetAddress _address;
-
-  final int _port;
-
   /// Whether this [DtlsClientConnection] is still connected.
   @override
   bool get connected => _connected;
@@ -441,8 +436,7 @@ class DtlsClientConnection extends Stream<Datagram> implements DtlsConnection {
   final Completer<DtlsClientConnection> _connectCompleter = Completer();
 
   /// Constructor
-  DtlsClientConnection(
-      this._dtlsClient, this._session, this._context, this._address, this._port,
+  DtlsClientConnection(this._dtlsClient, this._session, this._context,
       {PskCredentials? pskCredentials,
       EcdsaKeys? ecdsaKeys,
       void Function(DtlsEvent event)? eventListener})
