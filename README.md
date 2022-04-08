@@ -61,22 +61,22 @@ Future<void> main() async {
 ## Troubleshooting
 
 ### `stddef.h` (or other header) file not found
-It may be that you'll encounter the following error (maybe with another header 
+It may be that you'll encounter the following error (maybe with another header
 file in place of `stddef.h`) when generating the bindings using `dart run ffigen`:
 ```
 [SEVERE] : Header third_party/tinydtls/dtls.h: Total errors/warnings: 1.
 [SEVERE] :     /usr/include/sys/types.h:144:10: fatal error: 'stddef.h' file not found [Lexical or Preprocessor Issue]
 ```
-To fix this, `ffigen` needs to know where it can find this header file using the 
+To fix this, `ffigen` needs to know where it can find this header file using the
 `CPATH` environment variable, which should point to the location of the header files.
-To set this environment variable automatically by detecting the location using `clang`, 
+To set this environment variable automatically by detecting the location using `clang`,
 run the following command[^cpath]:
 ```bash
 export CPATH="$(clang -v 2>&1 | grep "Selected GCC installation" | rev | cut -d' ' -f1 | rev)/include"
 ```
 Simply execute this before running `dart run ffigen` and the headers should be correctly detected.
 
-[^cpath]: From [this GitHub comment](https://github.com/dart-lang/ffigen/issues/257#issuecomment-1061788936). 
+[^cpath]: From [this GitHub comment](https://github.com/dart-lang/ffigen/issues/257#issuecomment-1061788936).
           Of course, you can also set the path manually.
 
 ## License
