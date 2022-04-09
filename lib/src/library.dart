@@ -14,6 +14,8 @@ const _linuxFileName = "libtinydtls.so";
 const _windowsFileName = "libtinydtls.dll";
 const _macosFileName = "libtinydtls.dylib";
 
+const _errorMessage = "Couldn't find a shared tinyDTLS library.";
+
 /// This [Exception] is thrown if there is an error loading
 /// the shared tinyDTLS library.
 ///
@@ -24,54 +26,82 @@ class TinyDtlsLoadException implements Exception {
   /// The actual error message.
   final String message;
 
+  /// The original [Error] that caused this [Exception].
+  final Error? originalError;
+
   /// Constructor.
-  TinyDtlsLoadException(this.message);
+  TinyDtlsLoadException(this.message, [this.originalError]);
 }
 
-String _findTinyDtlsLibrary(List<String> paths, String fileName) {
+/// Checks if a file exists under one of the given [paths] and tries to load it
+/// as a [DynamicLibrary].
+///
+/// If no file can be found under one of the [paths], `null` is returned.
+DynamicLibrary? _findTinyDtlsOnFileSystem(List<String> paths) {
   for (final path in paths) {
     final fileExists = File(path).existsSync();
     if (fileExists) {
-      return path;
+      return DynamicLibrary.open(path);
     }
   }
 
-  throw TinyDtlsLoadException("Couldn't find $fileName.");
+  return null;
+}
+
+/// Checks first if tinyDTLS exists under one of the given file [paths], before
+/// trying to use the [defaultFileName] for the current platform.
+///
+/// The [defaultFileName] will be the one used in Flutter apps in most cases.
+DynamicLibrary _findTinyDtlsLibrary(
+    List<String> paths, String defaultFileName) {
+  final tinyDtls = _findTinyDtlsOnFileSystem(paths);
+
+  return tinyDtls ?? DynamicLibrary.open(defaultFileName);
 }
 
 DynamicLibrary _loadTinyDtlsLibrary() {
-  // TODO(JKRhb): Check if paths should be adjusted
+  // TODO(JKRhb): Check if there are default installation paths for MacOS and
+  //              Windows
+
   if (Platform.isAndroid) {
     return DynamicLibrary.open(_linuxFileName);
   }
 
   if (Platform.isLinux) {
     const paths = ["./$_linuxFileName", "/usr/local/lib/$_linuxFileName"];
-    final path = _findTinyDtlsLibrary(paths, _linuxFileName);
-    return DynamicLibrary.open(path);
+    return _findTinyDtlsLibrary(paths, _linuxFileName);
   }
 
   if (Platform.isWindows) {
     const paths = [_windowsFileName];
-    final path = _findTinyDtlsLibrary(paths, _windowsFileName);
-    return DynamicLibrary.open(path);
+    return _findTinyDtlsLibrary(paths, _windowsFileName);
   }
 
   if (Platform.isMacOS) {
-    const paths = [_macosFileName];
-    final path = _findTinyDtlsLibrary(paths, _macosFileName);
-    return DynamicLibrary.open(path);
+    const paths = ["./$_macosFileName"];
+    return _findTinyDtlsLibrary(paths, _macosFileName);
   }
 
   if (Platform.isIOS) {
     return DynamicLibrary.executable();
   }
 
-  throw TinyDtlsLoadException("Couldn't find a shared tinyDTLS library.");
+  throw TinyDtlsLoadException(_errorMessage);
 }
 
 TinyDTLS _loadTinyDtls() {
-  return TinyDTLS(_loadTinyDtlsLibrary());
+  final DynamicLibrary tinyDtls;
+  try {
+    tinyDtls = _loadTinyDtlsLibrary();
+  }
+  // ignore: avoid_catching_errors
+  on ArgumentError catch (error) {
+    // We catch the error here contrary to the recommended behavior in order to
+    // allow library users to offer DTLS functionality in their own libraries
+    // with the possibility that no tinyDTLS is available on the given platform.
+    throw TinyDtlsLoadException(_errorMessage, error);
+  }
+  return TinyDTLS(tinyDtls);
 }
 
 /// Represents the loaded tinyDTLS library.
