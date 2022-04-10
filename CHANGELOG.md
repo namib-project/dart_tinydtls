@@ -1,3 +1,7 @@
+## 0.5.0
+
+- Reworked and fixed the internal mechanism for finding tinyDTLS binaries
+
 ## 0.4.1
 
 - Applied minor refactorings and style changes
