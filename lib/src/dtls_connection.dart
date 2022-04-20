@@ -7,7 +7,8 @@ import 'dart:io';
 
 /// Represents a DTLS connection to a peer.
 ///
-/// Can be used to [send] data to the peer.
+/// Can be used to [send] data to and to [listen] for incoming data from the
+/// peer.
 abstract class DtlsConnection extends Stream<Datagram> {
   /// Whether this [DtlsConnection] is still connected.
   bool get connected;
