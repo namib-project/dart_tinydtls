@@ -3,6 +3,7 @@
 //
 // SPDX-License-Identifier: EPL-1.0 OR BSD-3-CLAUSE
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -18,7 +19,9 @@ void main() {
     /// Tests if the dynamic library can be loaded from within a DtlsClient.
     test('Client Instantiation Test', () async {
       final client = await DtlsClient.bind(InternetAddress.anyIPv6, 0);
+      expect(client.closed, false);
       client.close();
+      expect(client.closed, true);
     });
 
     /// Asserts that a user has to provide client credentials in order to
@@ -32,6 +35,7 @@ void main() {
 
     /// Performs a very basic client server exchange.
     test('Client Server Exchange Test', () async {
+      final completer = Completer<void>();
       final bindAddress = InternetAddress.anyIPv4;
       const address = "127.0.0.1";
       const port = 5684;
@@ -43,8 +47,10 @@ void main() {
       const serverMessage = "Goodbye World!";
 
       final client = await DtlsClient.bind(bindAddress, 0);
+      expect(client.closed, false);
       final server = await DtlsServer.bind(bindAddress, port,
           keyStore: {identity: preSharedKey});
+      expect(server.closed, false);
 
       server.listen(((connection) {
         connection.listen((event) {
@@ -61,9 +67,14 @@ void main() {
           expect(utf8.decode(event.data), serverMessage);
 
           server.close();
+          expect(server.closed, true);
           client.close();
+          expect(client.closed, true);
+          completer.complete();
         })
         ..send(utf8.encode(clientMessage));
+
+      return completer.future;
     });
   });
 }

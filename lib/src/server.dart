@@ -151,6 +151,9 @@ class DtlsServer extends Stream<DtlsServerConnection> {
 
   bool _closed = false;
 
+  /// Indicates whether this Server is closed.
+  bool get closed => _closed;
+
   final Map<String, String> _keyStore = {};
 
   Pointer<dtls_ecdsa_key_t> _ecdsaKeyStruct = nullptr;
