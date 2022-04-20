@@ -3,6 +3,7 @@
 //
 // SPDX-License-Identifier: EPL-1.0 OR BSD-3-CLAUSE
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -34,6 +35,7 @@ void main() {
 
     /// Performs a very basic client server exchange.
     test('Client Server Exchange Test', () async {
+      final completer = Completer<void>();
       final bindAddress = InternetAddress.anyIPv4;
       const address = "127.0.0.1";
       const port = 5684;
@@ -68,8 +70,11 @@ void main() {
           expect(server.closed, true);
           client.close();
           expect(client.closed, true);
+          completer.complete();
         })
         ..send(utf8.encode(clientMessage));
+
+      return completer.future;
     });
   });
 }
