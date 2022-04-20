@@ -158,6 +158,9 @@ class DtlsClient {
 
   bool _closed = false;
 
+  /// Indicates whether this Client is closed.
+  bool get closed => _closed;
+
   final int _maxTimeoutSeconds;
 
   final RawDatagramSocket _socket;
