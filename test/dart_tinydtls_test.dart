@@ -18,7 +18,9 @@ void main() {
     /// Tests if the dynamic library can be loaded from within a DtlsClient.
     test('Client Instantiation Test', () async {
       final client = await DtlsClient.bind(InternetAddress.anyIPv6, 0);
+      expect(client.closed, false);
       client.close();
+      expect(client.closed, true);
     });
 
     /// Asserts that a user has to provide client credentials in order to
@@ -43,8 +45,10 @@ void main() {
       const serverMessage = "Goodbye World!";
 
       final client = await DtlsClient.bind(bindAddress, 0);
+      expect(client.closed, false);
       final server = await DtlsServer.bind(bindAddress, port,
           keyStore: {identity: preSharedKey});
+      expect(server.closed, false);
 
       server.listen(((connection) {
         connection.listen((event) {
@@ -61,7 +65,9 @@ void main() {
           expect(utf8.decode(event.data), serverMessage);
 
           server.close();
+          expect(server.closed, true);
           client.close();
+          expect(client.closed, true);
         })
         ..send(utf8.encode(clientMessage));
     });
