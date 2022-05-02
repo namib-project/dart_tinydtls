@@ -13,7 +13,7 @@ import 'ffi/generated_bindings.dart';
 /// Enumeration of the elliptic curves supported by tinyDTLS.
 enum EcdsaCurve {
   /// Represents the secp256r1 curve.
-  dtlsEcdhCurveSecp256R1
+  secp256r1
 }
 
 /// Class representing ECC keys (one private and two public ones).
@@ -50,7 +50,7 @@ Pointer<dtls_ecdsa_key_t> ecdsaKeysToPointer(EcdsaKeys ecdsaKeys) {
     ..pub_key_y = malloc<Uint8>(DTLS_EC_KEY_SIZE);
 
   switch (ecdsaKeys.ecdsaCurve) {
-    case EcdsaCurve.dtlsEcdhCurveSecp256R1:
+    case EcdsaCurve.secp256r1:
       structReference.curve = dtls_ecdh_curve.DTLS_ECDH_CURVE_SECP256R1;
       break;
     default:

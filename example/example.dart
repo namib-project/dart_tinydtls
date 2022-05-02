@@ -14,8 +14,7 @@ EcdsaKeys _getKeys() {
   final publicKeyX = Uint8List.fromList(publicKeyXList);
   final publicKeyY = Uint8List.fromList(publicKeyYList);
 
-  return EcdsaKeys(
-      EcdsaCurve.dtlsEcdhCurveSecp256R1, privateKey, publicKeyX, publicKeyY);
+  return EcdsaKeys(EcdsaCurve.secp256r1, privateKey, publicKeyX, publicKeyY);
 }
 
 // Insert your test server address and port here
