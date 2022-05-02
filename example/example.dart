@@ -40,7 +40,8 @@ Future<void> main() async {
 
   int responses = 0;
 
-  final pskCredentials = PskCredentials("Client_identity", "secretPSK");
+  final pskCredentials =
+      PskCredentials(identity: "Client_identity", preSharedKey: "secretPSK");
 
   final connection = await client.connect(InternetAddress(address), port,
       pskCredentials: pskCredentials,

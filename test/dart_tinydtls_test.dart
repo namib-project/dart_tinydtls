@@ -61,7 +61,8 @@ void main() {
       }));
 
       final connection = await client.connect(InternetAddress(address), port,
-          pskCredentials: PskCredentials(identity, preSharedKey));
+          pskCredentials:
+              PskCredentials(identity: identity, preSharedKey: preSharedKey));
 
       connection
         ..listen((event) {

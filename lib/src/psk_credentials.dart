@@ -13,5 +13,5 @@ class PskCredentials {
   String preSharedKey;
 
   /// Constructor
-  PskCredentials(this.identity, this.preSharedKey);
+  PskCredentials({required this.identity, required this.preSharedKey});
 }
