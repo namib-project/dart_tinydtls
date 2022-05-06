@@ -11,7 +11,7 @@
 /// peer or wait for incoming [DtlsConnection]s, respectively.
 ///
 /// tinyDTLS only supports ciphers using either a Pre-Shared Key (PSK) or an
-/// ECDSA key. These are realized in Dart as the [PskCredentials] and
+/// ECDSA key. These are implemented in Dart as the [PskCredentials] and
 /// [EcdsaKeys] classes. At least one of these types of credentials have to be
 /// provided, otherwise an [ArgumentError] is thrown.
 ///
@@ -21,8 +21,9 @@
 /// (in the form of [Datagram] objects).
 ///
 /// Below you can see a simple example for how the [DtlsClient] class can be
-/// used for establishing a [DtlsConnection]. In this case, the [PskCredentials]
-/// class is used for passing a PSK and an identity to the [DtlsClient].
+/// used for establishing a [DtlsConnection]. In this case, a [PskCallback] is
+/// used to pass [PskCredentials], consisting of a PSK and an identity to the
+/// [DtlsClient].
 ///
 /// ```dart
 /// import 'dart:convert';
@@ -30,14 +31,18 @@
 ///
 /// import 'package:dart_tinydtls/dart_tinydtls.dart';
 ///
+/// PskCredentials _pskCallback(String identityHint) {
+///   return PskCredentials(
+///       identity: "Client_identity", preSharedKey: "secretPSK");
+/// }
+///
 /// Future<void> main() async {
 ///   const address = "fe80::abcd:ef00";
 ///   const port = 5684;
-///   final pskCredentials = PskCredentials("Client_identity", "secretPSK");
 ///
 ///   final client = await DtlsClient.bind(InternetAddress.anyIPv6, 0);
 ///   final connection = await client.connect(InternetAddress(address), port,
-///       pskCredentials: pskCredentials);
+///       pskCallback: _pskCallback);
 ///
 ///   final data = utf8.encode('Hello World!');
 ///   connection.send(data);
@@ -54,6 +59,7 @@ import 'src/dtls_connection.dart';
 import 'src/ecdsa_keys.dart';
 import 'src/psk_credentials.dart';
 import 'src/server.dart';
+import 'src/types.dart' show PskCallback;
 
 export 'src/client.dart' show DtlsClient;
 export 'src/dtls_connection.dart';

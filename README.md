@@ -29,14 +29,17 @@ import 'dart:io';
 
 import 'package:dart_tinydtls/dart_tinydtls.dart';
 
+PskCredentials _pskCallback(String identityHint) {
+  return PskCredentials(identity: "Client_identity", preSharedKey: "secretPSK");
+}
+
 Future<void> main() async {
   const address = "fe80::abcd:ef00";
   const port = 5684;
-  final pskCredentials = PskCredentials("Client_identity", "secretPSK");
 
   final client = await DtlsClient.bind(InternetAddress.anyIPv6, 0);
   final connection = await client.connect(InternetAddress(address), port,
-      pskCredentials: pskCredentials);
+      pskCallback: _pskCallback);
 
   final data = utf8.encode('Hello World!');
   connection.send(data);
