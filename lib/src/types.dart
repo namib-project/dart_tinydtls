@@ -7,6 +7,7 @@ import 'dart:ffi';
 import 'dart:ffi' as ffi;
 
 import 'ffi/generated_bindings.dart';
+import 'psk_credentials.dart';
 
 /// Magic number used for error codes.
 const errorCode = -1;
@@ -56,3 +57,11 @@ typedef NativeEcdsaVerifyHandler = ffi.Int32 Function(
     ffi.Pointer<ffi.Uint8>,
     ffi.Pointer<ffi.Uint8>,
     size_t);
+
+/// Function signature for a callback function for retrieving/generating
+/// [PskCredentials].
+///
+/// As the format of the [identityHint] is not well-defined, this parameter
+/// can probably be ignored in most cases, when both the identity and the key
+/// are known in advance.
+typedef PskCallback = PskCredentials Function(String identityHint);

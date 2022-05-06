@@ -60,9 +60,11 @@ void main() {
         });
       }));
 
+      final pskCredentials =
+          PskCredentials(identity: identity, preSharedKey: preSharedKey);
+
       final connection = await client.connect(InternetAddress(address), port,
-          pskCredentials:
-              PskCredentials(identity: identity, preSharedKey: preSharedKey));
+          pskCallback: (identityHint) => pskCredentials);
 
       connection
         ..listen((event) {

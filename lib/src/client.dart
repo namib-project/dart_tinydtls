@@ -80,24 +80,34 @@ int _retrievePskInfo(
     return errorCode;
   }
 
-  final pskCredentials = connection._pskCredential;
+  final pskCallback = connection._pskCallback;
 
-  final psk = pskCredentials?.preSharedKey;
-  final identity = pskCredentials?.identity;
+  // A PSK callback *must* be defined when this point is reached.
+  if (pskCallback == null) {
+    throw StateError("Expected a defined pskCallback.");
+  }
 
   final idString = utf8.decode(id.asTypedList(idLen));
 
   switch (type) {
     case dtls_credentials_type_t.DTLS_PSK_IDENTITY:
-      final _identity = identity ?? "";
+      final pskCredentials = pskCallback(idString);
+      final _identity = pskCredentials.identity;
+
       if (resultLength < _identity.length) {
         return createFatalError(dtls_alert_t.DTLS_ALERT_INTERNAL_ERROR);
       }
+
       final identityBytes = utf8.encoder.convert(_identity);
       result.asTypedList(resultLength).setAll(0, identityBytes);
+      connection._pskCredentials = pskCredentials;
       return identityBytes.lengthInBytes;
     case dtls_credentials_type_t.DTLS_PSK_KEY:
       {
+        final pskCredentials = connection._pskCredentials;
+        final psk = pskCredentials?.preSharedKey;
+        final identity = pskCredentials?.identity;
+
         if (psk == null || identity != idString) {
           return createFatalError(dtls_alert_t.DTLS_ALERT_ILLEGAL_PARAMETER);
         }
@@ -287,10 +297,10 @@ class DtlsClient {
   /// Establishes a [DtlsClientConnection] with a peer using the given [address]
   /// and [port].
   ///
-  /// Either [pskCredentials] or [ecdsaKeys], or both can be provided (in this
+  /// Either a [pskCallback] or [ecdsaKeys], or both can be provided (in this
   /// case the peer will be offered both a PSK and an ECC cipher during the
   /// DTLS Handshake).
-  /// If neither [pskCredentials] nor [ecdsaKeys] are given, an [ArgumentError]
+  /// If neither a [pskCallback] nor [ecdsaKeys] are given, an [ArgumentError]
   /// is thrown.
   ///
   /// If a [DtlsConnection] to a peer with the given [address] and [port]
@@ -298,10 +308,10 @@ class DtlsClient {
   /// one. If you want to establish a connection using different credentials,
   /// then you need to close the old connection first.
   Future<DtlsConnection> connect(InternetAddress address, int port,
-      {PskCredentials? pskCredentials,
+      {PskCallback? pskCallback,
       EcdsaKeys? ecdsaKeys,
       void Function(DtlsEvent event)? eventListener}) async {
-    if (pskCredentials == null && ecdsaKeys == null) {
+    if (pskCallback == null && ecdsaKeys == null) {
       throw ArgumentError("No DTLS client credentials have been provided.");
     }
 
@@ -312,11 +322,11 @@ class DtlsClient {
     }
 
     final context = _createContext(
-        hasPsk: pskCredentials != null, hasEcdsaKey: ecdsaKeys != null);
+        hasPsk: pskCallback != null, hasEcdsaKey: ecdsaKeys != null);
     final session = createSession(_tinyDtls, address, port);
 
     final connection = DtlsClientConnection(this, session, context,
-        pskCredentials: pskCredentials,
+        pskCallback: pskCallback,
         ecdsaKeys: ecdsaKeys,
         eventListener: eventListener);
     _connections[key] = connection;
@@ -427,7 +437,9 @@ class DtlsClientConnection extends Stream<Datagram> implements DtlsConnection {
 
   static final Map<int, DtlsClientConnection> _connections = {};
 
-  final PskCredentials? _pskCredential;
+  PskCredentials? _pskCredentials;
+
+  final PskCallback? _pskCallback;
 
   Timer? _connectionTimeout;
 
@@ -440,10 +452,10 @@ class DtlsClientConnection extends Stream<Datagram> implements DtlsConnection {
 
   /// Constructor
   DtlsClientConnection(this._dtlsClient, this._session, this._context,
-      {PskCredentials? pskCredentials,
+      {PskCallback? pskCallback,
       EcdsaKeys? ecdsaKeys,
       void Function(DtlsEvent event)? eventListener})
-      : _pskCredential = pskCredentials {
+      : _pskCallback = pskCallback {
     _connections[_context.address] = this;
 
     if (ecdsaKeys != null) {

@@ -62,3 +62,4 @@ export 'src/ecdsa_keys.dart' show EcdsaKeys, EcdsaCurve;
 export 'src/ffi/generated_bindings.dart' show TinyDTLS;
 export 'src/psk_credentials.dart';
 export 'src/server.dart' show DtlsServer;
+export 'src/types.dart' show PskCallback;
