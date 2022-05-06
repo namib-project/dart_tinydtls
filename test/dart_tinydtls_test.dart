@@ -6,6 +6,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:dart_tinydtls/dart_tinydtls.dart';
 import 'package:test/test.dart';
@@ -75,6 +76,55 @@ void main() {
         ..send(utf8.encode(clientMessage));
 
       return completer.future;
+    });
+  });
+
+  group('ECDSA Key Tests', () {
+    /// Tests if invalid ECDSA keys are rejected and valid keys are accepted.
+    test('ECDSA Key Validation Test', () async {
+      const validLength = 32;
+      const invalidLength = validLength - 1;
+
+      final validArgument =
+          Uint8List.fromList(List<int>.filled(validLength, 0));
+      final invalidArgument =
+          Uint8List.fromList(List<int>.filled(invalidLength, 0));
+
+      expect(
+          () => EcdsaKeys(EcdsaCurve.secp256r1, invalidArgument, validArgument,
+              validArgument),
+          throwsA(predicate((e) =>
+              e is ArgumentError &&
+              e.message ==
+                  "Expected a length of 32 bytes (256 bits) for the private "
+                      "key of the curve secp256r1, but found 31 bytes "
+                      "instead!")));
+
+      expect(
+          () => EcdsaKeys(EcdsaCurve.secp256r1, validArgument, invalidArgument,
+              validArgument),
+          throwsA(predicate((e) =>
+              e is ArgumentError &&
+              e.message ==
+                  "Expected a length of 32 bytes (256 bits) for the x "
+                      "coordinate of the public key of the curve secp256r1, "
+                      "but found 31 bytes instead!")));
+
+      expect(
+          () => EcdsaKeys(EcdsaCurve.secp256r1, validArgument, validArgument,
+              invalidArgument),
+          throwsA(predicate((e) =>
+              e is ArgumentError &&
+              e.message ==
+                  "Expected a length of 32 bytes (256 bits) for the y "
+                      "coordinate of the public key of the curve secp256r1, "
+                      "but found 31 bytes instead!")));
+
+      final validKeys = EcdsaKeys(
+          EcdsaCurve.secp256r1, validArgument, validArgument, validArgument);
+      expect(validKeys.privateKey.length, validLength);
+      expect(validKeys.publicKeyX.length, validLength);
+      expect(validKeys.privateKey.length, validLength);
     });
   });
 }
