@@ -5,6 +5,7 @@
 
 import 'dart:ffi';
 import 'dart:ffi' as ffi;
+import 'dart:io';
 
 import 'ffi/generated_bindings.dart';
 import 'psk_credentials.dart';
@@ -65,3 +66,8 @@ typedef NativeEcdsaVerifyHandler = ffi.Int32 Function(
 /// can probably be ignored in most cases, when both the identity and the key
 /// are known in advance.
 typedef PskCallback = PskCredentials Function(String identityHint);
+
+/// Function signature for a callback function for generating a PSK identity
+/// hint for a peer, optionally based on its [address] and/or [port].
+typedef PskIdentityHintCallback = String Function(
+    InternetAddress address, int port);
