@@ -240,7 +240,7 @@ class DtlsServer extends Stream<DtlsServerConnection> {
 
     Pointer<NativeFunction<NativeEcdsaVerifyHandler>> verifyEcdsaHandler;
 
-    if (_ecdsaKeyStruct == nullptr) {
+    if (_ecdsaKeyStruct != nullptr) {
       ecdsaHandler = Pointer.fromFunction(_retrieveEcdsaInfo, errorCode);
       verifyEcdsaHandler = Pointer.fromFunction(_verifyEcdsaKey, errorCode);
     } else {
