@@ -18,6 +18,10 @@ EcdsaKeys _getKeys() {
       privateKey: privateKey, publicKeyX: publicKeyX, publicKeyY: publicKeyY);
 }
 
+PskCredentials _pskCallback(String identityHint) {
+  return PskCredentials(identity: "Client_identity", preSharedKey: "secretPSK");
+}
+
 // Insert your test server address and port here
 const address = "::1";
 const port = 5684;
@@ -40,12 +44,8 @@ Future<void> main() async {
 
   int responses = 0;
 
-  final pskCredentials =
-      PskCredentials(identity: "Client_identity", preSharedKey: "secretPSK");
-
   final connection = await client.connect(InternetAddress(address), port,
-      pskCredentials: pskCredentials,
-      ecdsaKeys: _getKeys(), eventListener: (event) {
+      pskCallback: _pskCallback, ecdsaKeys: _getKeys(), eventListener: (event) {
     print(event);
     if (event == DtlsEvent.dtlsEventCloseNotify) {
       print("Closing the client");
