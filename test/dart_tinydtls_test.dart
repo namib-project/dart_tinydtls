@@ -61,7 +61,8 @@ void main() {
       }));
 
       final connection = await client.connect(InternetAddress(address), port,
-          pskCredentials: PskCredentials(identity, preSharedKey));
+          pskCredentials:
+              PskCredentials(identity: identity, preSharedKey: preSharedKey));
 
       connection
         ..listen((event) {
@@ -91,8 +92,12 @@ void main() {
           Uint8List.fromList(List<int>.filled(invalidLength, 0));
 
       expect(
-          () => EcdsaKeys(EcdsaCurve.secp256r1, invalidArgument, validArgument,
-              validArgument),
+          () => EcdsaKeys(
+                EcdsaCurve.secp256r1,
+                privateKey: invalidArgument,
+                publicKeyX: validArgument,
+                publicKeyY: validArgument,
+              ),
           throwsA(predicate((e) =>
               e is ArgumentError &&
               e.message ==
@@ -101,8 +106,12 @@ void main() {
                       "instead!")));
 
       expect(
-          () => EcdsaKeys(EcdsaCurve.secp256r1, validArgument, invalidArgument,
-              validArgument),
+          () => EcdsaKeys(
+                EcdsaCurve.secp256r1,
+                privateKey: validArgument,
+                publicKeyX: invalidArgument,
+                publicKeyY: validArgument,
+              ),
           throwsA(predicate((e) =>
               e is ArgumentError &&
               e.message ==
@@ -111,8 +120,12 @@ void main() {
                       "but found 31 bytes instead!")));
 
       expect(
-          () => EcdsaKeys(EcdsaCurve.secp256r1, validArgument, validArgument,
-              invalidArgument),
+          () => EcdsaKeys(
+                EcdsaCurve.secp256r1,
+                privateKey: validArgument,
+                publicKeyX: validArgument,
+                publicKeyY: invalidArgument,
+              ),
           throwsA(predicate((e) =>
               e is ArgumentError &&
               e.message ==
@@ -121,7 +134,11 @@ void main() {
                       "but found 31 bytes instead!")));
 
       final validKeys = EcdsaKeys(
-          EcdsaCurve.secp256r1, validArgument, validArgument, validArgument);
+        EcdsaCurve.secp256r1,
+        privateKey: validArgument,
+        publicKeyX: validArgument,
+        publicKeyY: validArgument,
+      );
       expect(validKeys.privateKey.length, validLength);
       expect(validKeys.publicKeyX.length, validLength);
       expect(validKeys.privateKey.length, validLength);

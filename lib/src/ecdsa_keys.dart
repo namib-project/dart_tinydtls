@@ -96,7 +96,11 @@ class EcdsaKeys {
 
   /// Constructor.
   EcdsaKeys(
-      this.ecdsaCurve, this.privateKey, this.publicKeyX, this.publicKeyY) {
+    this.ecdsaCurve, {
+    required this.privateKey,
+    required this.publicKeyX,
+    required this.publicKeyY,
+  }) {
     _verifyEcdsaKeys();
   }
 }
