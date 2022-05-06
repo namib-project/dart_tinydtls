@@ -1,3 +1,17 @@
+## 1.0.0
+
+### New Features
+- Added getters for `closed` class members to client and server
+- Changed parameters of credentials constructors to named ones
+- Replaced pskCredentials parameter of `DtlsClient` constructor with callback
+- Added callback for indicating PSK identity hints to `DtlsServer` class
+
+### Bugfixes
+- Fixed bug that prevented the use of ECDSA keys with the `DtlsServer`
+
+### Other Changes
+- Improved documentation of library and `DtlsConnection` class
+
 ## 0.5.0
 
 - Reworked and fixed the internal mechanism for finding tinyDTLS binaries
