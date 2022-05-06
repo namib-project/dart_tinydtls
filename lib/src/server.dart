@@ -78,7 +78,7 @@ int _retrievePskInfo(
   Pointer<Uint8> result,
   int resultLength,
 ) {
-  if (type != dtls_credentials_type_t.DTLS_PSK_KEY) {
+  if (type == dtls_credentials_type_t.DTLS_PSK_IDENTITY) {
     return 0;
   }
 
@@ -86,6 +86,22 @@ int _retrievePskInfo(
 
   if (server == null) {
     return errorCode;
+  }
+
+  if (type == dtls_credentials_type_t.DTLS_PSK_HINT) {
+    final pskIdentityHintCallback = server._pskIdentityHintCallback;
+
+    if (pskIdentityHintCallback == null) {
+      return 0;
+    }
+
+    final address = addressFromSession(session);
+    final port = portFromSession(session);
+
+    final pskIdentityHint = pskIdentityHintCallback(address, port);
+    final identityBytes = utf8.encoder.convert(pskIdentityHint);
+    result.asTypedList(resultLength).setAll(0, identityBytes);
+    return identityBytes.lengthInBytes;
   }
 
   final idString = utf8.decode(id.asTypedList(idLen));
@@ -160,10 +176,17 @@ class DtlsServer extends Stream<DtlsServerConnection> {
 
   late final Pointer<dtls_context_t> _context;
 
+  final PskIdentityHintCallback? _pskIdentityHintCallback;
+
   /// Constructor
-  DtlsServer(this._socket,
-      {EcdsaKeys? ecdsaKeys, Map<String, String>? keyStore, TinyDTLS? tinyDTLS})
-      : _tinyDtls = initializeTinyDtls(tinyDTLS) {
+  DtlsServer(
+    this._socket, {
+    EcdsaKeys? ecdsaKeys,
+    Map<String, String>? keyStore,
+    TinyDTLS? tinyDTLS,
+    PskIdentityHintCallback? pskIdentityHintCallback,
+  })  : _tinyDtls = initializeTinyDtls(tinyDTLS),
+        _pskIdentityHintCallback = pskIdentityHintCallback {
     _context = _tinyDtls.dtls_new_context(nullptr);
     _keyStore.addAll(keyStore ?? {});
     if (_keyStore.isEmpty && ecdsaKeys == null) {
@@ -207,14 +230,21 @@ class DtlsServer extends Stream<DtlsServerConnection> {
   ///
   /// Uses a [RawDatagramSocket] internally and passes the [host], [port],
   /// and [ttl] arguments to it.
-  static Future<DtlsServer> bind(dynamic host, int port,
-      {int ttl = 1,
-      TinyDTLS? tinyDtls,
-      Map<String, String>? keyStore,
-      EcdsaKeys? ecdsaKeys}) async {
+  static Future<DtlsServer> bind(
+    dynamic host,
+    int port, {
+    int ttl = 1,
+    TinyDTLS? tinyDtls,
+    Map<String, String>? keyStore,
+    EcdsaKeys? ecdsaKeys,
+    PskIdentityHintCallback? pskIdentityHintCallback,
+  }) async {
     final socket = await RawDatagramSocket.bind(host, port, ttl: ttl);
     return DtlsServer(socket,
-        tinyDTLS: tinyDtls, keyStore: keyStore, ecdsaKeys: ecdsaKeys)
+        tinyDTLS: tinyDtls,
+        keyStore: keyStore,
+        ecdsaKeys: ecdsaKeys,
+        pskIdentityHintCallback: pskIdentityHintCallback)
       .._externalSocket = false;
   }
 

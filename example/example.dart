@@ -19,7 +19,11 @@ EcdsaKeys _getKeys() {
 }
 
 PskCredentials _pskCallback(String identityHint) {
-  return PskCredentials(identity: "Client_identity", preSharedKey: "secretPSK");
+  return PskCredentials(identity: identityHint, preSharedKey: "secretPSK");
+}
+
+String _pskIdentityHintCallback(InternetAddress address, int port) {
+  return "Client_identity";
 }
 
 // Insert your test server address and port here
@@ -28,7 +32,9 @@ const port = 5684;
 
 Future<void> main() async {
   final server = await DtlsServer.bind(InternetAddress.anyIPv6, 5684,
-      keyStore: {"Client_identity": "secretPSK"}, ecdsaKeys: _getKeys());
+      keyStore: {"Client_identity": "secretPSK"},
+      ecdsaKeys: _getKeys(),
+      pskIdentityHintCallback: _pskIdentityHintCallback);
   server.listen((connection) {
     connection.listen(
       (event) {
