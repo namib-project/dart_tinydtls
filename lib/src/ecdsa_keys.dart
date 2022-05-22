@@ -10,16 +10,62 @@ import 'package:ffi/ffi.dart';
 
 import 'ffi/generated_bindings.dart';
 
+const _bitsPerByte = 8;
+
 /// Enumeration of the elliptic curves supported by tinyDTLS.
 enum EcdsaCurve {
   /// Represents the secp256r1 curve.
-  secp256r1
+  secp256r1(DTLS_EC_KEY_SIZE, dtls_ecdh_curve.DTLS_ECDH_CURVE_SECP256R1);
+
+  final int _internalEnumValue;
+
+  /// The key size of this curve in bytes.
+  final int byteLength;
+
+  /// The key size of this curve in bits.
+  int get bitLength => byteLength * _bitsPerByte;
+
+  /// Constructor.
+  const EcdsaCurve(this.byteLength, this._internalEnumValue);
+}
+
+/// A component (private key, or x or y coordinate of the public key) of an
+/// [EcdsaKeys] object.
+class _KeyComponent {
+  final _ArgumentType _argumentType;
+
+  /// The list of bytes representing this component of the [EcdsaKeys].
+  final Uint8List byteArray;
+
+  /// The byte length of this component of the [EcdsaKeys].
+  int get length => byteArray.length;
+
+  final EcdsaCurve _ecdsaCurve;
+
+  _KeyComponent(this._argumentType, this.byteArray, this._ecdsaCurve) {
+    _verify();
+  }
+
+  void _verify() {
+    if (length != _ecdsaCurve.byteLength) {
+      throw _EcdsaValidationError(_ecdsaCurve, _argumentType, length);
+    }
+  }
 }
 
 enum _ArgumentType {
   x,
   y,
-  private,
+  private;
+
+  @override
+  String toString() {
+    if (this == private) {
+      return "private key";
+    }
+
+    return "$name coordinate of the public key";
+  }
 }
 
 class _EcdsaValidationError extends ArgumentError {
@@ -27,36 +73,17 @@ class _EcdsaValidationError extends ArgumentError {
 
   final _ArgumentType _argumentType;
 
-  final int _expectedByteLength;
-
   final int _actualByteLength;
 
-  _EcdsaValidationError(this._ecdsaCurve, this._argumentType,
-      this._expectedByteLength, this._actualByteLength);
-
-  String get _parameterDescription {
-    if (_argumentType == _ArgumentType.private) {
-      return "private key";
-    }
-
-    return "${_argumentType.name} coordinate of the public key";
-  }
+  _EcdsaValidationError(
+      this._ecdsaCurve, this._argumentType, this._actualByteLength);
 
   @override
   String get message {
-    final expectedBitLength = _expectedByteLength * 8;
-
-    return "Expected a length of $_expectedByteLength bytes "
-        "($expectedBitLength bits) for the $_parameterDescription of "
-        "the curve ${_ecdsaCurve.name}, but found $_actualByteLength bytes "
-        "instead!";
+    return "Expected a length of ${_ecdsaCurve.byteLength} bytes "
+        "(${_ecdsaCurve.bitLength} bits) for the $_argumentType of the curve "
+        "${_ecdsaCurve.name}, but found $_actualByteLength bytes instead!";
   }
-}
-
-class _Secp256r1ValidationError extends _EcdsaValidationError {
-  _Secp256r1ValidationError(_ArgumentType argumentType, int actualByteLength)
-      : super(EcdsaCurve.secp256r1, argumentType, DTLS_EC_KEY_SIZE,
-            actualByteLength);
 }
 
 /// Class representing ECC keys (one private and two public ones).
@@ -65,70 +92,39 @@ class EcdsaKeys {
   final EcdsaCurve ecdsaCurve;
 
   /// The private key.
-  final Uint8List privateKey;
+  final _KeyComponent privateKey;
 
   /// The x coordinate of the public key.
-  final Uint8List publicKeyX;
+  final _KeyComponent publicKeyX;
 
   /// The y coordinate of the public key.
-  final Uint8List publicKeyY;
-
-  void _verifySecp256R1() {
-    if (publicKeyX.length != DTLS_EC_KEY_SIZE) {
-      throw _Secp256r1ValidationError(_ArgumentType.x, publicKeyX.length);
-    }
-
-    if (publicKeyY.length != DTLS_EC_KEY_SIZE) {
-      throw _Secp256r1ValidationError(_ArgumentType.y, publicKeyY.length);
-    }
-
-    if (privateKey.length != DTLS_EC_KEY_SIZE) {
-      throw _Secp256r1ValidationError(_ArgumentType.private, privateKey.length);
-    }
-  }
-
-  void _verifyEcdsaKeys() {
-    switch (ecdsaCurve) {
-      case EcdsaCurve.secp256r1:
-        _verifySecp256R1();
-    }
-  }
+  final _KeyComponent publicKeyY;
 
   /// Constructor.
   EcdsaKeys(
     this.ecdsaCurve, {
-    required this.privateKey,
-    required this.publicKeyX,
-    required this.publicKeyY,
-  }) {
-    _verifyEcdsaKeys();
-  }
+    required Uint8List privateKey,
+    required Uint8List publicKeyX,
+    required Uint8List publicKeyY,
+  })  : privateKey =
+            _KeyComponent(_ArgumentType.private, privateKey, ecdsaCurve),
+        publicKeyX = _KeyComponent(_ArgumentType.x, publicKeyX, ecdsaCurve),
+        publicKeyY = _KeyComponent(_ArgumentType.y, publicKeyY, ecdsaCurve);
 }
 
 /// Convert [EcdsaKeys] object to a Dart ffi [Pointer].
 Pointer<dtls_ecdsa_key_t> ecdsaKeysToPointer(EcdsaKeys ecdsaKeys) {
+  final keySize = ecdsaKeys.ecdsaCurve.byteLength;
   final ecdsaKeyStruct = malloc<dtls_ecdsa_key_t>();
-  final structReference = ecdsaKeyStruct.ref
-    ..priv_key = malloc<Uint8>(DTLS_EC_KEY_SIZE)
-    ..pub_key_x = malloc<Uint8>(DTLS_EC_KEY_SIZE)
-    ..pub_key_y = malloc<Uint8>(DTLS_EC_KEY_SIZE);
 
-  switch (ecdsaKeys.ecdsaCurve) {
-    case EcdsaCurve.secp256r1:
-      structReference.curve = dtls_ecdh_curve.DTLS_ECDH_CURVE_SECP256R1;
-      break;
-    default:
-      throw ArgumentError("Unknown Cipher ${ecdsaKeys.ecdsaCurve} found.");
-  }
-  structReference.priv_key
-      .asTypedList(DTLS_EC_KEY_SIZE)
-      .setAll(0, ecdsaKeys.privateKey);
-  structReference.pub_key_x
-      .asTypedList(DTLS_EC_KEY_SIZE)
-      .setAll(0, ecdsaKeys.publicKeyX);
-  structReference.pub_key_y
-      .asTypedList(DTLS_EC_KEY_SIZE)
-      .setAll(0, ecdsaKeys.publicKeyY);
+  ecdsaKeyStruct.ref
+    ..priv_key = malloc<Uint8>(keySize)
+    ..pub_key_x = malloc<Uint8>(keySize)
+    ..pub_key_y = malloc<Uint8>(keySize)
+    ..curve = ecdsaKeys.ecdsaCurve._internalEnumValue
+    ..priv_key.asTypedList(keySize).setAll(0, ecdsaKeys.privateKey.byteArray)
+    ..pub_key_x.asTypedList(keySize).setAll(0, ecdsaKeys.publicKeyX.byteArray)
+    ..pub_key_y.asTypedList(keySize).setAll(0, ecdsaKeys.publicKeyY.byteArray);
 
   return ecdsaKeyStruct;
 }
