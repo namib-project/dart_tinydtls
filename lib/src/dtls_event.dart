@@ -18,23 +18,23 @@ enum DtlsEvent {
   dtlsEventConnected,
 
   /// Occurs if the Client is trying to re-connect to an endpoint.
-  dtlsEventRenegotiate
-}
+  dtlsEventRenegotiate;
 
-/// Converts a numeric DTLS [eventCode] to a [DtlsEvent].
-///
-/// Returns `null` if the [eventCode] is unknown.
-DtlsEvent? eventFromCode(int eventCode) {
-  switch (eventCode) {
-    case dtls_alert_t.DTLS_ALERT_CLOSE_NOTIFY:
-      return DtlsEvent.dtlsEventCloseNotify;
-    case DTLS_EVENT_CONNECT:
-      return DtlsEvent.dtlsEventConnect;
-    case DTLS_EVENT_CONNECTED:
-      return DtlsEvent.dtlsEventConnected;
-    case DTLS_EVENT_RENEGOTIATE:
-      return DtlsEvent.dtlsEventRenegotiate;
-    default:
-      return null;
+  /// Converts a numeric DTLS [eventCode] to a [DtlsEvent].
+  ///
+  /// Returns `null` if the [eventCode] is unknown.
+  static DtlsEvent? fromCode(int eventCode) {
+    switch (eventCode) {
+      case dtls_alert_t.DTLS_ALERT_CLOSE_NOTIFY:
+        return dtlsEventCloseNotify;
+      case DTLS_EVENT_CONNECT:
+        return dtlsEventConnect;
+      case DTLS_EVENT_CONNECTED:
+        return dtlsEventConnected;
+      case DTLS_EVENT_RENEGOTIATE:
+        return dtlsEventRenegotiate;
+      default:
+        return null;
+    }
   }
 }

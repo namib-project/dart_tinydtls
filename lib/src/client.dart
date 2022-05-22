@@ -56,7 +56,7 @@ int _handleEvent(Pointer<dtls_context_t> context, Pointer<session_t> session,
     return errorCode;
   }
 
-  final dtlsEvent = eventFromCode(code);
+  final dtlsEvent = DtlsEvent.fromCode(code);
 
   if (dtlsEvent != null) {
     connection._emitDtlsEvent(dtlsEvent);
