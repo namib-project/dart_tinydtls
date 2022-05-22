@@ -1,3 +1,7 @@
+## 1.0.1
+
+- Added missing override of the `toString()` method to `TinyDtlsLoadException`
+
 ## 1.0.0
 
 ### New Features
