@@ -31,6 +31,11 @@ class TinyDtlsLoadException implements Exception {
 
   /// Constructor.
   TinyDtlsLoadException(this.message, [this.originalError]);
+
+  @override
+  String toString() {
+    return "$runtimeType: $message";
+  }
 }
 
 /// Checks if a file exists under one of the given [paths] and tries to load it
