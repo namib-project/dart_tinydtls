@@ -1,3 +1,8 @@
+## 2.0.0
+
+- Refactored handling of ECDSA keys and DTLS events using enhanced enums
+- Increased minimum required Dart SDK version to 2.17
+
 ## 1.0.1
 
 - Added missing override of the `toString()` method to `TinyDtlsLoadException`
