@@ -4,9 +4,9 @@
 // SPDX-License-Identifier: EPL-1.0 OR BSD-3-CLAUSE
 
 import 'dart:async';
-import 'dart:convert';
 import 'dart:ffi';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:ffi/ffi.dart';
 
@@ -17,6 +17,10 @@ import 'ffi/generated_bindings.dart';
 import 'library.dart';
 import 'types.dart';
 import 'util.dart';
+
+/// Callback signature for retrieving Pre-Shared Keys from a [DtlsServer]'s
+/// keystore.
+typedef PskKeyStoreCallback = Uint8List? Function(Uint8List identity);
 
 DtlsServerConnection? _serverConnectionFromSession(Pointer<session_t> session) {
   final address = addressFromSession(session);
@@ -99,22 +103,18 @@ int _retrievePskInfo(
     final port = portFromSession(session);
 
     final pskIdentityHint = pskIdentityHintCallback(address, port);
-    final identityBytes = utf8.encoder.convert(pskIdentityHint);
-    result.asTypedList(resultLength).setAll(0, identityBytes);
-    return identityBytes.lengthInBytes;
+    result.asTypedList(resultLength).setAll(0, pskIdentityHint);
+    return pskIdentityHint.lengthInBytes;
   }
 
-  final idString = utf8.decode(id.asTypedList(idLen));
-
-  final psk = server._keyStore[idString];
+  final psk = server._pskKeyStoreCallback?.call(id.asTypedList(idLen));
 
   if (psk != null) {
     if (resultLength < psk.length) {
       return createFatalError(dtls_alert_t.DTLS_ALERT_INTERNAL_ERROR);
     }
-    final pskBytes = utf8.encoder.convert(psk);
-    result.asTypedList(resultLength).setAll(0, pskBytes);
-    return pskBytes.lengthInBytes;
+    result.asTypedList(resultLength).setAll(0, psk);
+    return psk.lengthInBytes;
   }
 
   return createFatalError(dtls_alert_t.DTLS_ALERT_DECRYPT_ERROR);
@@ -170,8 +170,6 @@ class DtlsServer extends Stream<DtlsServerConnection> {
   /// Indicates whether this Server is closed.
   bool get closed => _closed;
 
-  final Map<String, String> _keyStore = {};
-
   Pointer<dtls_ecdsa_key_t> _ecdsaKeyStruct = nullptr;
 
   late final Pointer<dtls_context_t> _context;
@@ -182,14 +180,14 @@ class DtlsServer extends Stream<DtlsServerConnection> {
   DtlsServer(
     this._socket, {
     EcdsaKeys? ecdsaKeys,
-    Map<String, String>? keyStore,
+    PskKeyStoreCallback? pskKeyStoreCallback,
     TinyDTLS? tinyDTLS,
     PskIdentityHintCallback? pskIdentityHintCallback,
   })  : _tinyDtls = initializeTinyDtls(tinyDTLS),
+        _pskKeyStoreCallback = pskKeyStoreCallback,
         _pskIdentityHintCallback = pskIdentityHintCallback {
     _context = _tinyDtls.dtls_new_context(nullptr);
-    _keyStore.addAll(keyStore ?? {});
-    if (_keyStore.isEmpty && ecdsaKeys == null) {
+    if (_pskKeyStoreCallback == null && ecdsaKeys == null) {
       throw ArgumentError("No DTLS client credentials have been provided.");
     }
 
@@ -200,31 +198,12 @@ class DtlsServer extends Stream<DtlsServerConnection> {
     _startListening();
   }
 
-  /// Adds a new [preSharedKey] to this [DtlsServer] and associates it with an
-  /// [identity].
-  void addPskCredential(String identity, String preSharedKey) {
-    _keyStore[identity] = preSharedKey;
-  }
-
-  /// Removes a Pre-Shared Key for a given [identity].
-  ///
-  /// Returns the key if the removal was successful. Otherwise, `null` is
-  /// returned.
-  ///
-  /// Throws a [StateError] if no credentials (no Pre-Shared Key and no
-  /// ECDSA Key) are left for the server to use.
-  String? removePskCredential(String identity) {
-    final removedValue = _keyStore.remove(identity);
-    if (_keyStore.isEmpty && _ecdsaKeyStruct == nullptr) {
-      throw StateError("DtlsServer must have at least one PSK or ECDSA Key!");
-    }
-    return removedValue;
-  }
+  final PskKeyStoreCallback? _pskKeyStoreCallback;
 
   /// Binds a [DtlsServer] to the given [host] and [port].
   ///
   /// The server will either use the pairs of Identities and Pre-Shared Keys
-  /// provided in the [keyStore] Map or a set of [EcdsaKeys] to establish
+  /// provided by the [pskKeyStoreCallback] or a set of [EcdsaKeys] to establish
   /// connections with peers. If no credentials are provided, a [StateError]
   /// will be thrown.
   ///
@@ -235,14 +214,14 @@ class DtlsServer extends Stream<DtlsServerConnection> {
     int port, {
     int ttl = 1,
     TinyDTLS? tinyDtls,
-    Map<String, String>? keyStore,
+    PskKeyStoreCallback? pskKeyStoreCallback,
     EcdsaKeys? ecdsaKeys,
     PskIdentityHintCallback? pskIdentityHintCallback,
   }) async {
     final socket = await RawDatagramSocket.bind(host, port, ttl: ttl);
     return DtlsServer(socket,
         tinyDTLS: tinyDtls,
-        keyStore: keyStore,
+        pskKeyStoreCallback: pskKeyStoreCallback,
         ecdsaKeys: ecdsaKeys,
         pskIdentityHintCallback: pskIdentityHintCallback)
       .._externalSocket = false;
@@ -260,7 +239,7 @@ class DtlsServer extends Stream<DtlsServerConnection> {
 
     final Pointer<NativeFunction<NativePskHandler>> pskHandler;
 
-    if (_keyStore.isNotEmpty) {
+    if (_pskKeyStoreCallback != null) {
       pskHandler = Pointer.fromFunction(_retrievePskInfo, errorCode);
     } else {
       pskHandler = nullptr;
@@ -348,7 +327,6 @@ class DtlsServer extends Stream<DtlsServerConnection> {
 
     _servers.remove(_context.address);
     freeEdcsaStruct(_ecdsaKeyStruct);
-    _keyStore.clear();
     _connectionStream.close();
 
     if (!_externalSocket || closeExternalSocket) {

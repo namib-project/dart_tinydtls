@@ -41,8 +41,10 @@ void main() {
       const address = "127.0.0.1";
       const port = 5684;
 
-      const identity = "Client_identity";
-      const preSharedKey = "secretPSK";
+      final identity = "Client_identity";
+      final encodedIdentity = Uint8List.fromList(utf8.encode(identity));
+      final preSharedKey = "secretPSK";
+      final encodedPreSharedKey = Uint8List.fromList(utf8.encode(preSharedKey));
 
       const clientMessage = "Hello World!";
       const serverMessage = "Goodbye World!";
@@ -50,7 +52,11 @@ void main() {
       final client = await DtlsClient.bind(bindAddress, 0);
       expect(client.closed, false);
       final server = await DtlsServer.bind(bindAddress, port,
-          keyStore: {identity: preSharedKey});
+          pskKeyStoreCallback: ((clientIdentity) {
+        final identityString = utf8.decode(clientIdentity);
+        assert(identity == identityString);
+        return encodedPreSharedKey;
+      }));
       expect(server.closed, false);
 
       server.listen(((connection) {
@@ -60,8 +66,8 @@ void main() {
         });
       }));
 
-      final pskCredentials =
-          PskCredentials(identity: identity, preSharedKey: preSharedKey);
+      final pskCredentials = PskCredentials(
+          identity: encodedIdentity, preSharedKey: encodedPreSharedKey);
 
       final connection = await client.connect(InternetAddress(address), port,
           pskCallback: (identityHint) => pskCredentials);

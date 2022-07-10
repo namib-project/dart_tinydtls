@@ -4,12 +4,12 @@
 // SPDX-License-Identifier: EPL-1.0 OR BSD-3-CLAUSE
 
 import 'dart:async';
-import 'dart:convert';
 import 'dart:ffi';
 import 'dart:ffi' as ffi;
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:collection/collection.dart';
 import 'package:ffi/ffi.dart';
 
 import 'dtls_connection.dart';
@@ -87,18 +87,18 @@ int _retrievePskInfo(
     throw StateError("Expected a defined pskCallback.");
   }
 
-  final idString = utf8.decode(id.asTypedList(idLen));
+  final idBytes = id.asTypedList(idLen);
 
   switch (type) {
     case dtls_credentials_type_t.DTLS_PSK_IDENTITY:
-      final pskCredentials = pskCallback(idString);
+      final pskCredentials = pskCallback(idBytes);
       final _identity = pskCredentials.identity;
 
       if (resultLength < _identity.length) {
         return createFatalError(dtls_alert_t.DTLS_ALERT_INTERNAL_ERROR);
       }
 
-      final identityBytes = utf8.encoder.convert(_identity);
+      final identityBytes = _identity;
       result.asTypedList(resultLength).setAll(0, identityBytes);
       connection._pskCredentials = pskCredentials;
       return identityBytes.lengthInBytes;
@@ -108,13 +108,13 @@ int _retrievePskInfo(
         final psk = pskCredentials?.preSharedKey;
         final identity = pskCredentials?.identity;
 
-        if (psk == null || identity != idString) {
+        if (psk == null ||
+            !ListEquality<int>().equals(identity?.toList(), idBytes.toList())) {
           return createFatalError(dtls_alert_t.DTLS_ALERT_ILLEGAL_PARAMETER);
         }
 
-        final pskBytes = utf8.encoder.convert(psk);
-        result.asTypedList(resultLength).setAll(0, pskBytes);
-        return pskBytes.lengthInBytes;
+        result.asTypedList(resultLength).setAll(0, psk);
+        return psk.lengthInBytes;
       }
     case dtls_credentials_type_t.DTLS_PSK_HINT:
     default:
