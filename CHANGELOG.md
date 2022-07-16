@@ -1,3 +1,10 @@
+## 3.0.0
+
+*This version contains breaking API changes.*
+
+- fix!: use `Uint8List` instead of String for `PSKCredentials`
+- feat!: let client and server handle fatal DTLS alerts
+
 ## 2.0.0
 
 - Refactored handling of ECDSA keys and DTLS events using enhanced enums
