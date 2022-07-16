@@ -3,14 +3,16 @@
 //
 // SPDX-License-Identifier: EPL-1.0 OR BSD-3-CLAUSE
 
+import 'dart:typed_data';
+
 /// Credentials used for PSK Cipher Suites consisting of an [identity]
 /// and a [preSharedKey].
 class PskCredentials {
   /// The identity used with the [preSharedKey].
-  String identity;
+  Uint8List identity;
 
   /// The actual pre-shared key.
-  String preSharedKey;
+  Uint8List preSharedKey;
 
   /// Constructor
   PskCredentials({required this.identity, required this.preSharedKey});
