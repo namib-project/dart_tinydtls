@@ -69,7 +69,7 @@ Future<void> main() async {
   final connection = await client.connect(InternetAddress(address), port,
       pskCallback: _pskCallback, ecdsaKeys: _getKeys(), eventListener: (event) {
     print(event);
-    if (event == DtlsEvent.dtlsEventCloseNotify) {
+    if (event.requiresClosing) {
       print("Closing the client");
       client.close();
     }

@@ -56,11 +56,8 @@ int _handleEvent(Pointer<dtls_context_t> context, Pointer<session_t> session,
     return errorCode;
   }
 
-  final dtlsEvent = DtlsEvent.fromCode(code);
-
-  if (dtlsEvent != null) {
-    connection._emitDtlsEvent(dtlsEvent);
-  }
+  final dtlsEvent = DtlsEvent.fromCodes(level, code);
+  connection._emitDtlsEvent(dtlsEvent);
 
   return success;
 }
@@ -467,7 +464,7 @@ class DtlsClientConnection extends Stream<Datagram> implements DtlsConnection {
 
   void _emitDtlsEvent(DtlsEvent event) {
     _dtlsEvents.sink.add(event);
-    if (event == DtlsEvent.dtlsEventCloseNotify) {
+    if (event.requiresClosing) {
       close(freeResources: false);
     }
   }
