@@ -26,20 +26,25 @@ use cases are demonstrated more thoroughly in the `example.dart` file.
 ```dart
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:dart_tinydtls/dart_tinydtls.dart';
 
-PskCredentials _pskCallback(String identityHint) {
-  return PskCredentials(identity: "Client_identity", preSharedKey: "secretPSK");
+PskCredentials _pskCallback(Uint8List identityHint) {
+  final identity = Uint8List.fromList(utf8.encode("Client_identity"));
+  final preSharedKey = Uint8List.fromList(utf8.encode("secretPSK"));
+
+  return PskCredentials(identity: identity, preSharedKey: preSharedKey);
 }
 
 Future<void> main() async {
-  const address = "fe80::abcd:ef00";
+  final address =
+      (await InternetAddress.lookup("californium.eclipseprojects.io"))[0];
   const port = 5684;
 
   final client = await DtlsClient.bind(InternetAddress.anyIPv6, 0);
-  final connection = await client.connect(InternetAddress(address), port,
-      pskCallback: _pskCallback);
+  final connection = await client.connect(address, port,
+      pskCallback: _pskCallback, eventListener: print);
 
   final data = utf8.encode('Hello World!');
   connection.send(data);
