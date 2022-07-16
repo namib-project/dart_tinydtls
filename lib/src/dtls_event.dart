@@ -343,7 +343,6 @@ class DtlsEvent {
   final AlertLevel alertLevel;
 
   /// The description of this alert.
-  // TODO(JKRhb): Should it be allowed that this value is null?
   final AlertDescription alertDescription;
 
   /// Constructor.
