@@ -33,15 +33,7 @@ enum AlertLevel {
       HashMap.fromEntries(values.map((value) => MapEntry(value._code, value)));
 
   /// Creates an [AlertDescription] from a numeric [code].
-  static AlertLevel fromCode(int code) {
-    final alertlevel = _registry[code];
-
-    if (alertlevel == null) {
-      throw StateError("Encountered unknown DTLS Alert Level $code");
-    }
-
-    return alertlevel;
-  }
+  static AlertLevel? fromCode(int code) => _registry[code];
 
   @override
   String toString() => "Alert Level '$_stringValue'";
@@ -51,11 +43,6 @@ enum _DescriptionConstraints {
   unspecified,
   alwaysWarning,
   alwaysFatal;
-
-  bool disallowLevel(AlertLevel alertLevel) {
-    return (this == alwaysFatal && alertLevel != AlertLevel.fatal) ||
-        (this == alwaysWarning && alertLevel != AlertLevel.warning);
-  }
 }
 
 /// The description component of a [DtlsEvent].
@@ -318,15 +305,7 @@ enum AlertDescription {
       HashMap.fromEntries(values.map((value) => MapEntry(value._code, value)));
 
   /// Creates an [AlertDescription] from a numeric [code].
-  static AlertDescription fromCode(int code) {
-    final description = _registry[code];
-
-    if (description == null) {
-      throw StateError("Encountered unknown DTLS Alert Description");
-    }
-
-    return description;
-  }
+  static AlertDescription? fromCode(int code) => _registry[code];
 
   @override
   String toString() {
@@ -340,19 +319,13 @@ enum AlertDescription {
 /// Consists of an [alertLevel] and a [alertDescription].
 class DtlsEvent {
   /// The alert level of this alert.
-  final AlertLevel alertLevel;
+  final AlertLevel? alertLevel;
 
   /// The description of this alert.
-  final AlertDescription alertDescription;
+  final AlertDescription? alertDescription;
 
   /// Constructor.
-  DtlsEvent(this.alertLevel, this.alertDescription) {
-    if (alertDescription._constraints.disallowLevel(alertLevel)) {
-      throw StateError(
-          "Required ${AlertLevel.warning} for $alertDescription but got "
-          "$alertLevel");
-    }
-  }
+  DtlsEvent(this.alertLevel, this.alertDescription);
 
   /// Constructor.
   factory DtlsEvent.fromCodes(int level, int code) {
@@ -371,6 +344,11 @@ class DtlsEvent {
       alertDescription == AlertDescription.closeNotify;
 
   @override
-  String toString() =>
-      "DtlsEvent with $alertLevel and description '$alertDescription'.";
+  String toString() {
+    final levelString = alertLevel?.toString() ?? "unknown Alert Level";
+    final descriptionString =
+        alertDescription?.toString() ?? "unknown Description";
+
+    return "DtlsEvent with $levelString and description '$descriptionString'.";
+  }
 }
