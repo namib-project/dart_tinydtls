@@ -202,7 +202,7 @@ class DtlsServer extends Stream<DtlsServerConnection> {
   ///
   /// The server will either use the pairs of Identities and Pre-Shared Keys
   /// provided by the [pskKeyStoreCallback] or a set of [EcdsaKeys] to establish
-  /// connections with peers. If no credentials are provided, a [StateError]
+  /// connections with peers. If no credentials are provided, an [ArgumentError]
   /// will be thrown.
   ///
   /// Uses a [RawDatagramSocket] internally and passes the [host], [port],
