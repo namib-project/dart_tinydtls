@@ -14,6 +14,7 @@ import 'package:ffi/ffi.dart';
 
 import 'dtls_connection.dart';
 import 'dtls_event.dart';
+import 'dtls_exception.dart';
 import 'ecdsa_keys.dart';
 import 'ffi/generated_bindings.dart';
 import 'library.dart';
@@ -331,10 +332,8 @@ class DtlsClient {
 
     final result = _tinyDtls.dtls_connect(context, session);
 
-    if (result == 0) {
-      throw StateError("DTLS channel already exists!");
-    } else if (result < 0) {
-      throw StateError("An error occurred while trying to connect");
+    if (result < 0) {
+      throw DtlsException("An error occurred while trying to connect");
     }
 
     return connection._connectCompleter.future;
@@ -375,9 +374,7 @@ class DtlsClient {
     final result = _tinyDtls.dtls_write(context, session, buffer, data.length);
 
     if (result == -1) {
-      throw StateError("Error sending DTLS message");
-    } else if (result == 0) {
-      throw StateError("Not connected to DTLS peer");
+      throw DtlsException("Error sending DTLS message");
     }
 
     return result;
@@ -476,7 +473,7 @@ class DtlsClientConnection extends Stream<Datagram> implements DtlsConnection {
   @override
   int send(List<int> data) {
     if (!_connected) {
-      throw StateError("Sending failed: Not connected!");
+      throw DtlsException("Sending failed: Not connected!");
     }
     return _dtlsClient._send(data, _context, _session);
   }

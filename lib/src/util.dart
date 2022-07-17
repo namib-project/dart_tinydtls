@@ -9,6 +9,7 @@ import 'dart:typed_data';
 
 import 'package:ffi/ffi.dart';
 
+import 'dtls_exception.dart';
 import 'ffi/generated_bindings.dart';
 import 'library.dart';
 
@@ -103,7 +104,7 @@ Pointer<session_t> createSession(
   malloc.free(addr);
 
   if (session.address == nullptr.address) {
-    throw StateError("Error occurred establishing DTLS session");
+    throw DtlsException("Error occurred establishing DTLS session");
   }
 
   return session;
