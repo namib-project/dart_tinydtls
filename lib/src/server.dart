@@ -298,7 +298,7 @@ class DtlsServer extends Stream<DtlsServerConnection> {
     buffer.asTypedList(data.length).setAll(0, data);
     final result = _tinyDtls.dtls_write(context, session, buffer, data.length);
 
-    if (result == -1) {
+    if (result < 0) {
       throw DtlsException("Error sending DTLS message");
     }
 
