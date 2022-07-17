@@ -1,3 +1,8 @@
+## 3.1.0
+
+- feat: throw DtlsExceptions instead of StateErrors on error
+- fix!: don't throw StateErrors for unknown alert parameters
+
 ## 3.0.0
 
 *This version contains breaking API changes.*
