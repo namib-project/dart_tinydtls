@@ -39,12 +39,6 @@ enum AlertLevel {
   String toString() => "Alert Level '$_stringValue'";
 }
 
-enum _DescriptionConstraints {
-  unspecified,
-  alwaysWarning,
-  alwaysFatal;
-}
-
 /// The description component of a [DtlsEvent].
 ///
 /// Can either be the description of a warning or a fatal error.
@@ -53,21 +47,18 @@ enum AlertDescription {
   connect(
     DTLS_EVENT_CONNECT,
     "connect (tinydtls event)",
-    _DescriptionConstraints.unspecified,
   ),
 
   /// Occurs when the connection has been successfully established.
   connected(
     DTLS_EVENT_CONNECTED,
     "connected (tinydtls event)",
-    _DescriptionConstraints.unspecified,
   ),
 
   /// Occurs if the Client is trying to re-connect to an endpoint.
   renegotiate(
     DTLS_EVENT_RENEGOTIATE,
     "renegotiate (tinydtls event)",
-    _DescriptionConstraints.unspecified,
   ),
 
   /// Indicates that the peer has closed their connection.
@@ -76,7 +67,6 @@ enum AlertDescription {
   closeNotify(
     dtls_alert_t.DTLS_ALERT_CLOSE_NOTIFY,
     "close_notify",
-    _DescriptionConstraints.unspecified,
   ),
 
   /// An inappropriate message was received.
@@ -86,7 +76,6 @@ enum AlertDescription {
   unexceptedMessage(
     dtls_alert_t.DTLS_ALERT_UNEXPECTED_MESSAGE,
     "unexpected_message",
-    _DescriptionConstraints.alwaysFatal,
   ),
 
   /// This alert is returned if a record is received with an incorrect MAC.
@@ -97,7 +86,6 @@ enum AlertDescription {
   badRecordMac(
     dtls_alert_t.DTLS_ALERT_BAD_RECORD_MAC,
     "bad_record_mac",
-    _DescriptionConstraints.alwaysFatal,
   ),
 
   /// A TLSCiphertext record was received that had a length more than 2^14+2048
@@ -110,7 +98,6 @@ enum AlertDescription {
   recordOverflow(
     dtls_alert_t.DTLS_ALERT_RECORD_OVERFLOW,
     "record_overflow",
-    _DescriptionConstraints.alwaysFatal,
   ),
 
   /// The decompression function received improper input (e.g., data that would
@@ -121,7 +108,6 @@ enum AlertDescription {
   decompressionFailure(
     dtls_alert_t.DTLS_ALERT_DECOMPRESSION_FAILURE,
     "decompression_failure",
-    _DescriptionConstraints.alwaysFatal,
   ),
 
   /// Indicates that the sender was unable to negotiate an acceptable set of
@@ -131,7 +117,6 @@ enum AlertDescription {
   handshakeFailure(
     dtls_alert_t.DTLS_ALERT_HANDSHAKE_FAILURE,
     "handshake_failure",
-    _DescriptionConstraints.alwaysFatal,
   ),
 
   /// A certificate was corrupt, contained signatures that did not
@@ -139,28 +124,24 @@ enum AlertDescription {
   badCertificate(
     dtls_alert_t.DTLS_ALERT_BAD_CERTIFICATE,
     "bad_certificate",
-    _DescriptionConstraints.unspecified,
   ),
 
   /// A certificate was of an unsupported type.
   unsupportedCertificate(
     dtls_alert_t.DTLS_ALERT_UNSUPPORTED_CERTIFICATE,
     "unsupported_certificate",
-    _DescriptionConstraints.unspecified,
   ),
 
   /// A certificate was revoked by its signer.
   certificateRevoked(
     dtls_alert_t.DTLS_ALERT_CERTIFICATE_REVOKED,
     "certificate_revoked",
-    _DescriptionConstraints.unspecified,
   ),
 
   /// A certificate has expired or is not currently valid.
   certificateExpired(
     dtls_alert_t.DTLS_ALERT_CERTIFICATE_EXPIRED,
     "certificate_expired",
-    _DescriptionConstraints.unspecified,
   ),
 
   /// Some other (unspecified) issue arose in processing the certificate,
@@ -168,7 +149,6 @@ enum AlertDescription {
   certificateUnknown(
     dtls_alert_t.DTLS_ALERT_CERTIFICATE_UNKNOWN,
     "certificate_unknown",
-    _DescriptionConstraints.unspecified,
   ),
 
   /// A field in the handshake was out of range or inconsistent with other
@@ -178,7 +158,6 @@ enum AlertDescription {
   illegalParameter(
     dtls_alert_t.DTLS_ALERT_ILLEGAL_PARAMETER,
     "illegal_parameter",
-    _DescriptionConstraints.alwaysFatal,
   ),
 
   /// A valid certificate chain or partial chain was received, but the
@@ -189,7 +168,6 @@ enum AlertDescription {
   unknownCa(
     dtls_alert_t.DTLS_ALERT_UNKNOWN_CA,
     "unknown_ca",
-    _DescriptionConstraints.alwaysFatal,
   ),
 
   /// A valid certificate was received, but when access control was
@@ -198,7 +176,6 @@ enum AlertDescription {
   accessDenied(
     dtls_alert_t.DTLS_ALERT_ACCESS_DENIED,
     "access_denied",
-    _DescriptionConstraints.alwaysFatal,
   ),
 
   /// A message could not be decoded because some field was out of the
@@ -210,7 +187,6 @@ enum AlertDescription {
   decodeError(
     dtls_alert_t.DTLS_ALERT_DECODE_ERROR,
     "decode_error",
-    _DescriptionConstraints.alwaysFatal,
   ),
 
   /// A handshake cryptographic operation failed, including being unable
@@ -220,7 +196,6 @@ enum AlertDescription {
   decryptError(
     dtls_alert_t.DTLS_ALERT_DECRYPT_ERROR,
     "decrypt_error",
-    _DescriptionConstraints.alwaysFatal,
   ),
 
   /// The protocol version the client has attempted to negotiate is recognized
@@ -231,7 +206,6 @@ enum AlertDescription {
   protocolVersion(
     dtls_alert_t.DTLS_ALERT_PROTOCOL_VERSION,
     "protocol_version",
-    _DescriptionConstraints.alwaysFatal,
   ),
 
   /// Returned instead of handshake_failure when a negotiation has failed
@@ -242,7 +216,6 @@ enum AlertDescription {
   insufficientSecurity(
     dtls_alert_t.DTLS_ALERT_INSUFFICIENT_SECURITY,
     "insufficient_security",
-    _DescriptionConstraints.alwaysFatal,
   ),
 
   /// An internal error unrelated to the peer or the correctness of the protocol
@@ -252,7 +225,6 @@ enum AlertDescription {
   internalError(
     dtls_alert_t.DTLS_ALERT_INTERNAL_ERROR,
     "internal_error",
-    _DescriptionConstraints.alwaysFatal,
   ),
 
   /// This handshake is being canceled for some reason unrelated to a protocol
@@ -264,7 +236,6 @@ enum AlertDescription {
   userCanceled(
     dtls_alert_t.DTLS_ALERT_USER_CANCELED,
     "user_canceled",
-    _DescriptionConstraints.unspecified,
   ),
 
   /// Sent by the client in response to a hello request or by the server in
@@ -274,7 +245,6 @@ enum AlertDescription {
   noRenegotiation(
     dtls_alert_t.DTLS_ALERT_NO_RENEGOTIATION,
     "no_renegotiation",
-    _DescriptionConstraints.alwaysWarning,
   ),
 
   /// Sent by clients that receive an extended server hello containing an
@@ -285,21 +255,17 @@ enum AlertDescription {
   unsupportedExtension(
     dtls_alert_t.DTLS_ALERT_UNSUPPORTED_EXTENSION,
     "unsupported_extension",
-    _DescriptionConstraints.alwaysFatal,
   );
 
   /// Constructor.
   const AlertDescription(
     this._code,
     this._identifier,
-    this._constraints,
   );
 
   final int _code;
 
   final String _identifier;
-
-  final _DescriptionConstraints _constraints;
 
   static final _registry =
       HashMap.fromEntries(values.map((value) => MapEntry(value._code, value)));
