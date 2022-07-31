@@ -61,9 +61,15 @@ class KeyComponent {
   }
 }
 
+/// The three different types of an ECDSA [KeyComponent].
 enum KeyComponentType {
+  /// The x coordinate of the public key.
   x,
+
+  /// The y coordinate of the public key.
   y,
+
+  /// The private key.
   private;
 
   @override
