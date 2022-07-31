@@ -63,7 +63,7 @@ import 'src/types.dart' show PskCallback;
 
 export 'src/client.dart' show DtlsClient;
 export 'src/dtls_connection.dart';
-export 'src/dtls_event.dart' show DtlsEvent;
+export 'src/dtls_event.dart' show DtlsEvent, AlertDescription, AlertLevel;
 export 'src/dtls_exception.dart';
 export 'src/ecdsa_keys.dart' show EcdsaKeys, EcdsaCurve;
 export 'src/ffi/generated_bindings.dart' show TinyDTLS;
