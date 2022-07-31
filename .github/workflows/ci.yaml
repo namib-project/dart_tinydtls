@@ -8,10 +8,15 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+        matrix:
+            os: [ubuntu-latest, windows-latest, macos-latest]
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
       - uses: dart-lang/setup-dart@v1
 
       - name: Install dependencies
@@ -22,6 +27,38 @@ jobs:
 
       - name: Analyze project source
         run: dart analyze
+
+      - name: Recompile tinydtls binary for Linux
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          cd third_party/tinydtls
+          ./autogen.sh
+          ./configure
+          make
+          cd ../..
+          mv third_party/tinydtls/libtinydtls.so libtinydtls.so
+
+      - name: Recompile tinydtls binary for Windows
+        if: matrix.os == 'windows-latest'
+        run: |
+          cd third_party/tinydtls
+          cmake -G "Unix Makefiles" -DBUILD_SHARED_LIBS=true .
+          make
+          cd ../..
+          mv third_party/tinydtls/libtinydtls.dll tinydtls.dll
+
+      - name: Recompile tinydtls binary for macOS
+        if: matrix.os == 'macos-latest'
+        run: |
+          # Remove the signature of the dart binary
+          # See https://github.com/dart-lang/sdk/issues/38314
+          codesign --remove-signature $DART_HOME/bin/dart
+
+          cd third_party/tinydtls
+          cmake -G "Unix Makefiles" -DBUILD_SHARED_LIBS=true .
+          make
+          cd ../..
+          cp third_party/tinydtls/*.dylib .
 
       - name: Run tests with coverage
         run: dart test --coverage="coverage"
