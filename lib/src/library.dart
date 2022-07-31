@@ -11,7 +11,8 @@ import 'package:ffi/ffi.dart';
 import 'ffi/generated_bindings.dart';
 
 const _linuxFileName = "libtinydtls.so";
-const _windowsFileName = "libtinydtls.dll";
+const _windowsFileName = "tinydtls.dll";
+const _windowsFileNameAlternative = "libtinydtls.dll";
 const _macosFileName = "libtinydtls.dylib";
 
 const _errorMessage = "Couldn't find a shared tinyDTLS library.";
@@ -78,7 +79,7 @@ DynamicLibrary _loadTinyDtlsLibrary() {
   }
 
   if (Platform.isWindows) {
-    const paths = [_windowsFileName];
+    const paths = [_windowsFileName, _windowsFileNameAlternative];
     return _findTinyDtlsLibrary(paths, _windowsFileName);
   }
 
