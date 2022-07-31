@@ -31,8 +31,8 @@ enum EcdsaCurve {
 
 /// A component (private key, or x or y coordinate of the public key) of an
 /// [EcdsaKeys] object.
-class _KeyComponent {
-  final _ArgumentType _argumentType;
+class KeyComponent {
+  final KeyComponentType _argumentType;
 
   /// The list of bytes representing this component of the [EcdsaKeys].
   final Uint8List byteArray;
@@ -42,7 +42,8 @@ class _KeyComponent {
 
   final EcdsaCurve _ecdsaCurve;
 
-  _KeyComponent(this._argumentType, this.byteArray, this._ecdsaCurve) {
+  /// Constructor.
+  KeyComponent(this._argumentType, this.byteArray, this._ecdsaCurve) {
     _verify();
   }
 
@@ -51,9 +52,16 @@ class _KeyComponent {
       throw _EcdsaValidationError(_ecdsaCurve, _argumentType, length);
     }
   }
+
+  Pointer<UnsignedChar> _createKeyPointer() {
+    final keySize = _ecdsaCurve.byteLength;
+    final pointer = malloc<Uint8>(keySize)
+      ..asTypedList(keySize).setAll(0, byteArray);
+    return Pointer.fromAddress(pointer.address);
+  }
 }
 
-enum _ArgumentType {
+enum KeyComponentType {
   x,
   y,
   private;
@@ -71,7 +79,7 @@ enum _ArgumentType {
 class _EcdsaValidationError extends ArgumentError {
   final EcdsaCurve _ecdsaCurve;
 
-  final _ArgumentType _argumentType;
+  final KeyComponentType _argumentType;
 
   final int _actualByteLength;
 
@@ -92,13 +100,13 @@ class EcdsaKeys {
   final EcdsaCurve ecdsaCurve;
 
   /// The private key.
-  final _KeyComponent privateKey;
+  final KeyComponent privateKey;
 
   /// The x coordinate of the public key.
-  final _KeyComponent publicKeyX;
+  final KeyComponent publicKeyX;
 
   /// The y coordinate of the public key.
-  final _KeyComponent publicKeyY;
+  final KeyComponent publicKeyY;
 
   /// Constructor.
   EcdsaKeys(
@@ -107,24 +115,20 @@ class EcdsaKeys {
     required Uint8List publicKeyX,
     required Uint8List publicKeyY,
   })  : privateKey =
-            _KeyComponent(_ArgumentType.private, privateKey, ecdsaCurve),
-        publicKeyX = _KeyComponent(_ArgumentType.x, publicKeyX, ecdsaCurve),
-        publicKeyY = _KeyComponent(_ArgumentType.y, publicKeyY, ecdsaCurve);
+            KeyComponent(KeyComponentType.private, privateKey, ecdsaCurve),
+        publicKeyX = KeyComponent(KeyComponentType.x, publicKeyX, ecdsaCurve),
+        publicKeyY = KeyComponent(KeyComponentType.y, publicKeyY, ecdsaCurve);
 }
 
 /// Convert [EcdsaKeys] object to a Dart ffi [Pointer].
 Pointer<dtls_ecdsa_key_t> ecdsaKeysToPointer(EcdsaKeys ecdsaKeys) {
-  final keySize = ecdsaKeys.ecdsaCurve.byteLength;
   final ecdsaKeyStruct = malloc<dtls_ecdsa_key_t>();
 
   ecdsaKeyStruct.ref
-    ..priv_key = malloc<Uint8>(keySize)
-    ..pub_key_x = malloc<Uint8>(keySize)
-    ..pub_key_y = malloc<Uint8>(keySize)
-    ..curve = ecdsaKeys.ecdsaCurve._internalEnumValue
-    ..priv_key.asTypedList(keySize).setAll(0, ecdsaKeys.privateKey.byteArray)
-    ..pub_key_x.asTypedList(keySize).setAll(0, ecdsaKeys.publicKeyX.byteArray)
-    ..pub_key_y.asTypedList(keySize).setAll(0, ecdsaKeys.publicKeyY.byteArray);
+    ..priv_key = ecdsaKeys.privateKey._createKeyPointer()
+    ..pub_key_x = ecdsaKeys.publicKeyX._createKeyPointer()
+    ..pub_key_y = ecdsaKeys.publicKeyY._createKeyPointer()
+    ..curve = ecdsaKeys.ecdsaCurve._internalEnumValue;
 
   return ecdsaKeyStruct;
 }
