@@ -168,18 +168,18 @@ class TinyDTLS {
 
   late final _dtls_p_hashPtr = _lookup<
       ffi.NativeFunction<
-          size_t Function(
+          ffi.Int32 Function(
               ffi.Int32,
               ffi.Pointer<ffi.Uint8>,
-              size_t,
+              ffi.Int32,
               ffi.Pointer<ffi.Uint8>,
-              size_t,
+              ffi.Int32,
               ffi.Pointer<ffi.Uint8>,
-              size_t,
+              ffi.Int32,
               ffi.Pointer<ffi.Uint8>,
-              size_t,
+              ffi.Int32,
               ffi.Pointer<ffi.Uint8>,
-              size_t)>>('dtls_p_hash');
+              ffi.Int32)>>('dtls_p_hash');
   late final _dtls_p_hash = _dtls_p_hashPtr.asFunction<
       int Function(
           int,
@@ -225,17 +225,17 @@ class TinyDTLS {
 
   late final _dtls_prfPtr = _lookup<
       ffi.NativeFunction<
-          size_t Function(
+          ffi.Int32 Function(
               ffi.Pointer<ffi.Uint8>,
-              size_t,
+              ffi.Int32,
               ffi.Pointer<ffi.Uint8>,
-              size_t,
+              ffi.Int32,
               ffi.Pointer<ffi.Uint8>,
-              size_t,
+              ffi.Int32,
               ffi.Pointer<ffi.Uint8>,
-              size_t,
+              ffi.Int32,
               ffi.Pointer<ffi.Uint8>,
-              size_t)>>('dtls_prf');
+              ffi.Int32)>>('dtls_prf');
   late final _dtls_prf = _dtls_prfPtr.asFunction<
       int Function(
           ffi.Pointer<ffi.Uint8>,
@@ -285,7 +285,7 @@ class TinyDTLS {
               ffi.Pointer<dtls_hmac_context_t>,
               ffi.Pointer<ffi.Uint8>,
               ffi.Pointer<ffi.Uint8>,
-              size_t,
+              ffi.Int32,
               ffi.Pointer<ffi.Uint8>)>>('dtls_mac');
   late final _dtls_mac = _dtls_macPtr.asFunction<
       void Function(ffi.Pointer<dtls_hmac_context_t>, ffi.Pointer<ffi.Uint8>,
@@ -335,12 +335,12 @@ class TinyDTLS {
           ffi.Int32 Function(
               ffi.Pointer<dtls_ccm_params_t>,
               ffi.Pointer<ffi.Uint8>,
-              size_t,
+              ffi.Int32,
               ffi.Pointer<ffi.Uint8>,
               ffi.Pointer<ffi.Uint8>,
-              size_t,
+              ffi.Int32,
               ffi.Pointer<ffi.Uint8>,
-              size_t)>>('dtls_encrypt_params');
+              ffi.Int32)>>('dtls_encrypt_params');
   late final _dtls_encrypt_params = _dtls_encrypt_paramsPtr.asFunction<
       int Function(
           ffi.Pointer<dtls_ccm_params_t>,
@@ -399,13 +399,13 @@ class TinyDTLS {
       ffi.NativeFunction<
           ffi.Int32 Function(
               ffi.Pointer<ffi.Uint8>,
-              size_t,
+              ffi.Int32,
               ffi.Pointer<ffi.Uint8>,
               ffi.Pointer<ffi.Uint8>,
               ffi.Pointer<ffi.Uint8>,
-              size_t,
+              ffi.Int32,
               ffi.Pointer<ffi.Uint8>,
-              size_t)>>('dtls_encrypt');
+              ffi.Int32)>>('dtls_encrypt');
   late final _dtls_encrypt = _dtls_encryptPtr.asFunction<
       int Function(
           ffi.Pointer<ffi.Uint8>,
@@ -459,12 +459,12 @@ class TinyDTLS {
           ffi.Int32 Function(
               ffi.Pointer<dtls_ccm_params_t>,
               ffi.Pointer<ffi.Uint8>,
-              size_t,
+              ffi.Int32,
               ffi.Pointer<ffi.Uint8>,
               ffi.Pointer<ffi.Uint8>,
-              size_t,
+              ffi.Int32,
               ffi.Pointer<ffi.Uint8>,
-              size_t)>>('dtls_decrypt_params');
+              ffi.Int32)>>('dtls_decrypt_params');
   late final _dtls_decrypt_params = _dtls_decrypt_paramsPtr.asFunction<
       int Function(
           ffi.Pointer<dtls_ccm_params_t>,
@@ -521,13 +521,13 @@ class TinyDTLS {
       ffi.NativeFunction<
           ffi.Int32 Function(
               ffi.Pointer<ffi.Uint8>,
-              size_t,
+              ffi.Int32,
               ffi.Pointer<ffi.Uint8>,
               ffi.Pointer<ffi.Uint8>,
               ffi.Pointer<ffi.Uint8>,
-              size_t,
+              ffi.Int32,
               ffi.Pointer<ffi.Uint8>,
-              size_t)>>('dtls_decrypt');
+              ffi.Int32)>>('dtls_decrypt');
   late final _dtls_decrypt = _dtls_decryptPtr.asFunction<
       int Function(
           ffi.Pointer<ffi.Uint8>,
@@ -563,8 +563,11 @@ class TinyDTLS {
 
   late final _dtls_psk_pre_master_secretPtr = _lookup<
       ffi.NativeFunction<
-          ffi.Int32 Function(ffi.Pointer<ffi.Uint8>, size_t,
-              ffi.Pointer<ffi.Uint8>, size_t)>>('dtls_psk_pre_master_secret');
+          ffi.Int32 Function(
+              ffi.Pointer<ffi.Uint8>,
+              ffi.Int32,
+              ffi.Pointer<ffi.Uint8>,
+              ffi.Int32)>>('dtls_psk_pre_master_secret');
   late final _dtls_psk_pre_master_secret =
       _dtls_psk_pre_master_secretPtr.asFunction<
           int Function(
@@ -594,9 +597,9 @@ class TinyDTLS {
               ffi.Pointer<ffi.Uint8>,
               ffi.Pointer<ffi.Uint8>,
               ffi.Pointer<ffi.Uint8>,
-              size_t,
+              ffi.Int32,
               ffi.Pointer<ffi.Uint8>,
-              size_t)>>('dtls_ecdh_pre_master_secret');
+              ffi.Int32)>>('dtls_ecdh_pre_master_secret');
   late final _dtls_ecdh_pre_master_secret =
       _dtls_ecdh_pre_master_secretPtr.asFunction<
           int Function(ffi.Pointer<ffi.Uint8>, ffi.Pointer<ffi.Uint8>,
@@ -619,7 +622,7 @@ class TinyDTLS {
   late final _dtls_ecdsa_generate_keyPtr = _lookup<
       ffi.NativeFunction<
           ffi.Void Function(ffi.Pointer<ffi.Uint8>, ffi.Pointer<ffi.Uint8>,
-              ffi.Pointer<ffi.Uint8>, size_t)>>('dtls_ecdsa_generate_key');
+              ffi.Pointer<ffi.Uint8>, ffi.Int32)>>('dtls_ecdsa_generate_key');
   late final _dtls_ecdsa_generate_key = _dtls_ecdsa_generate_keyPtr.asFunction<
       void Function(ffi.Pointer<ffi.Uint8>, ffi.Pointer<ffi.Uint8>,
           ffi.Pointer<ffi.Uint8>, int)>();
@@ -646,9 +649,9 @@ class TinyDTLS {
       ffi.NativeFunction<
           ffi.Void Function(
               ffi.Pointer<ffi.Uint8>,
-              size_t,
+              ffi.Int32,
               ffi.Pointer<ffi.Uint8>,
-              size_t,
+              ffi.Int32,
               ffi.Pointer<ffi.Uint32>,
               ffi.Pointer<ffi.Uint32>)>>('dtls_ecdsa_create_sig_hash');
   late final _dtls_ecdsa_create_sig_hash =
@@ -686,13 +689,13 @@ class TinyDTLS {
       ffi.NativeFunction<
           ffi.Void Function(
               ffi.Pointer<ffi.Uint8>,
-              size_t,
+              ffi.Int32,
               ffi.Pointer<ffi.Uint8>,
-              size_t,
+              ffi.Int32,
               ffi.Pointer<ffi.Uint8>,
-              size_t,
+              ffi.Int32,
               ffi.Pointer<ffi.Uint8>,
-              size_t,
+              ffi.Int32,
               ffi.Pointer<ffi.Uint32>,
               ffi.Pointer<ffi.Uint32>)>>('dtls_ecdsa_create_sig');
   late final _dtls_ecdsa_create_sig = _dtls_ecdsa_create_sigPtr.asFunction<
@@ -733,9 +736,9 @@ class TinyDTLS {
           ffi.Int32 Function(
               ffi.Pointer<ffi.Uint8>,
               ffi.Pointer<ffi.Uint8>,
-              size_t,
+              ffi.Int32,
               ffi.Pointer<ffi.Uint8>,
-              size_t,
+              ffi.Int32,
               ffi.Pointer<ffi.Uint8>,
               ffi.Pointer<ffi.Uint8>)>>('dtls_ecdsa_verify_sig_hash');
   late final _dtls_ecdsa_verify_sig_hash =
@@ -782,13 +785,13 @@ class TinyDTLS {
           ffi.Int32 Function(
               ffi.Pointer<ffi.Uint8>,
               ffi.Pointer<ffi.Uint8>,
-              size_t,
+              ffi.Int32,
               ffi.Pointer<ffi.Uint8>,
-              size_t,
+              ffi.Int32,
               ffi.Pointer<ffi.Uint8>,
-              size_t,
+              ffi.Int32,
               ffi.Pointer<ffi.Uint8>,
-              size_t,
+              ffi.Int32,
               ffi.Pointer<ffi.Uint8>,
               ffi.Pointer<ffi.Uint8>)>>('dtls_ecdsa_verify_sig');
   late final _dtls_ecdsa_verify_sig = _dtls_ecdsa_verify_sigPtr.asFunction<
@@ -819,7 +822,7 @@ class TinyDTLS {
 
   late final _dtls_ec_key_asn1_from_uint32Ptr = _lookup<
       ffi.NativeFunction<
-          ffi.Int32 Function(ffi.Pointer<ffi.Uint32>, size_t,
+          ffi.Int32 Function(ffi.Pointer<ffi.Uint32>, ffi.Int32,
               ffi.Pointer<ffi.Uint8>)>>('dtls_ec_key_asn1_from_uint32');
   late final _dtls_ec_key_asn1_from_uint32 =
       _dtls_ec_key_asn1_from_uint32Ptr.asFunction<
@@ -1012,6 +1015,45 @@ class TinyDTLS {
   late final _dtls_renegotiate = _dtls_renegotiatePtr.asFunction<
       int Function(ffi.Pointer<dtls_context_t>, ffi.Pointer<session_t>)>();
 
+  /// Writes the application data given in multiple buffers to the peer
+  /// specified by @p session.
+  ///
+  /// @param ctx      The DTLS context to use.
+  /// @param session  The remote transport address and local interface.
+  /// @param buf_array     Array of buffers with the data to write.
+  /// @param buf_len_array The length of the arrays in @p buf_array.
+  /// @param buf_array_len The number of data arrays.
+  ///
+  /// @return The number of bytes written, @c -1 on error or @c 0
+  /// if the peer already exists but is not connected yet.
+  int dtls_writev(
+    ffi.Pointer<dtls_context_t> ctx,
+    ffi.Pointer<session_t> session,
+    ffi.Pointer<ffi.Pointer<uint8>> buf_array,
+    ffi.Pointer<ffi.Int32> buf_len_array,
+    int buf_array_len,
+  ) {
+    return _dtls_writev(
+      ctx,
+      session,
+      buf_array,
+      buf_len_array,
+      buf_array_len,
+    );
+  }
+
+  late final _dtls_writevPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Int32 Function(
+              ffi.Pointer<dtls_context_t>,
+              ffi.Pointer<session_t>,
+              ffi.Pointer<ffi.Pointer<uint8>>,
+              ffi.Pointer<ffi.Int32>,
+              ffi.Int32)>>('dtls_writev');
+  late final _dtls_writev = _dtls_writevPtr.asFunction<
+      int Function(ffi.Pointer<dtls_context_t>, ffi.Pointer<session_t>,
+          ffi.Pointer<ffi.Pointer<uint8>>, ffi.Pointer<ffi.Int32>, int)>();
+
   /// Writes the application data given in @p buf to the peer specified
   /// by @p session.
   ///
@@ -1042,7 +1084,7 @@ class TinyDTLS {
               ffi.Pointer<dtls_context_t>,
               ffi.Pointer<session_t>,
               ffi.Pointer<uint8>,
-              size_t)>>('dtls_write');
+              ffi.Int32)>>('dtls_write');
   late final _dtls_write = _dtls_writePtr.asFunction<
       int Function(ffi.Pointer<dtls_context_t>, ffi.Pointer<session_t>,
           ffi.Pointer<uint8>, int)>();
@@ -1371,9 +1413,14 @@ class dtls_handshake_parameters_psk_t extends ffi.Struct {
 }
 
 class seqnum_t extends ffi.Struct {
+  /// < current read sequence number
   @ffi.Uint64()
   external int cseq;
 
+  /// bitfield of already received sequence numbers.
+  /// B0 := cseqn, B1 := cseqn -1, ..., B63 := cseqn - 63
+  /// Initially 0, set to 1 (B0) with the first received message of the epoch,
+  /// or -1 (B0..B63) with a verified ClientHello (server-side only)
   @ffi.Uint64()
   external int bitfield;
 }
@@ -1422,8 +1469,6 @@ abstract class dtls_cipher_t {
 class netq_t extends ffi.Opaque {}
 
 class dtls_handshake_parameters_t extends ffi.Opaque {}
-
-typedef size_t = ffi.Uint64;
 
 /// List of known hash functions for use in dtls_hmac_init(). The
 /// identifiers are the same as the HashAlgorithm defined in
@@ -1600,7 +1645,7 @@ class UT_hash_table extends ffi.Struct {
 
   external ffi.Pointer<UT_hash_handle> tail;
 
-  @ptrdiff_t()
+  @ffi.Int32()
   external int hho;
 
   @ffi.Uint32()
@@ -1628,8 +1673,6 @@ class UT_hash_bucket extends ffi.Struct {
   @ffi.Uint32()
   external int expand_mult;
 }
-
-typedef ptrdiff_t = ffi.Int64;
 
 abstract class dtls_peer_type {
   static const int DTLS_CLIENT = 0;
@@ -1659,7 +1702,7 @@ class dtls_handler_t extends ffi.Struct {
   external ffi.Pointer<
       ffi.NativeFunction<
           ffi.Int32 Function(ffi.Pointer<dtls_context_t>,
-              ffi.Pointer<session_t>, ffi.Pointer<uint8>, size_t)>> write;
+              ffi.Pointer<session_t>, ffi.Pointer<uint8>, ffi.Int32)>> write;
 
   /// Called from dtls_handle_message() deliver application data that was
   /// received on the given session. The data is delivered only after
@@ -1674,7 +1717,7 @@ class dtls_handler_t extends ffi.Struct {
   external ffi.Pointer<
       ffi.NativeFunction<
           ffi.Int32 Function(ffi.Pointer<dtls_context_t>,
-              ffi.Pointer<session_t>, ffi.Pointer<uint8>, size_t)>> read;
+              ffi.Pointer<session_t>, ffi.Pointer<uint8>, ffi.Int32)>> read;
 
   /// The event handler is called when a message from the alert
   /// protocol is received or the state of the DTLS session changes.
@@ -1718,9 +1761,9 @@ class dtls_handler_t extends ffi.Struct {
               ffi.Pointer<session_t>,
               ffi.Int32,
               ffi.Pointer<ffi.Uint8>,
-              size_t,
+              ffi.Int32,
               ffi.Pointer<ffi.Uint8>,
-              size_t)>> get_psk_info;
+              ffi.Int32)>> get_psk_info;
 
   /// Called during handshake to get the server's or client's ecdsa
   /// key used to authenticate this server or client in this
@@ -1778,7 +1821,7 @@ class dtls_handler_t extends ffi.Struct {
               ffi.Pointer<session_t>,
               ffi.Pointer<ffi.Uint8>,
               ffi.Pointer<ffi.Uint8>,
-              size_t)>> verify_ecdsa_key;
+              ffi.Int32)>> verify_ecdsa_key;
 }
 
 /// Generic header structure of the DTLS record layer.
@@ -1847,6 +1890,8 @@ const int HAVE_ASSERT_H = 1;
 const int HAVE_FCNTL_H = 1;
 
 const int HAVE_GETRANDOM = 1;
+
+const int HAVE_INET_NTOP = 1;
 
 const int HAVE_INTTYPES_H = 1;
 
