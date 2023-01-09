@@ -123,22 +123,20 @@ InternetAddressType _addressTypeFromSession(Pointer<session_t> session) {
 
 InternetAddress _ipv4AddressFromSession(Pointer<session_t> session) {
   final Pointer<Uint8> pointer = session.cast();
-  const _ipv4AddressOffset = 12;
-  const _ipv4AddressByteLength = 4;
-  return InternetAddress.fromRawAddress(pointer
-      .elementAt(_ipv4AddressOffset)
-      .asTypedList(_ipv4AddressByteLength));
+  const ipv4AddressOffset = 12;
+  const ipv4AddressByteLength = 4;
+  return InternetAddress.fromRawAddress(
+      pointer.elementAt(ipv4AddressOffset).asTypedList(ipv4AddressByteLength));
 }
 
 InternetAddress _ipv6AddressFromSession(Pointer<session_t> session) {
   final Pointer<Uint8> pointer = session.cast();
 
-  const _ipv6AddressOffset = 16;
-  const _ipv6AddressByteLength = 16;
+  const ipv6AddressOffset = 16;
+  const ipv6AddressByteLength = 16;
 
-  return InternetAddress.fromRawAddress(pointer
-      .elementAt(_ipv6AddressOffset)
-      .asTypedList(_ipv6AddressByteLength));
+  return InternetAddress.fromRawAddress(
+      pointer.elementAt(ipv6AddressOffset).asTypedList(ipv6AddressByteLength));
 }
 
 /// Determines the [InternetAddress] used by a given DTLS [session].

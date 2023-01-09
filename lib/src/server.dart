@@ -31,8 +31,9 @@ DtlsServerConnection? _serverConnectionFromSession(Pointer<session_t> session) {
 }
 
 int _handleWrite(Pointer<dtls_context_t> context, Pointer<session_t> session,
-    Pointer<Uint8> dataAddress, int dataLength) {
-  final data = dataAddress.asTypedList(dataLength).buffer.asUint8List();
+    Pointer<UnsignedChar> dataAddress, int dataLength) {
+  final data =
+      dataAddress.cast<Uint8>().asTypedList(dataLength).buffer.asUint8List();
   final address = addressFromSession(session);
   final port = portFromSession(session);
   final connection = _serverConnectionFromSession(session);
@@ -41,7 +42,7 @@ int _handleWrite(Pointer<dtls_context_t> context, Pointer<session_t> session,
 }
 
 int _handleRead(Pointer<dtls_context_t> context, Pointer<session_t> session,
-    Pointer<Uint8> dataAddress, int dataLength) {
+    Pointer<UnsignedChar> dataAddress, int dataLength) {
   final address = addressFromSession(session);
   final port = portFromSession(session);
   final connection = _serverConnectionFromSession(session);
@@ -50,7 +51,7 @@ int _handleRead(Pointer<dtls_context_t> context, Pointer<session_t> session,
     return errorCode;
   }
 
-  final data = dataAddress.asTypedList(dataLength);
+  final data = dataAddress.cast<Uint8>().asTypedList(dataLength);
 
   connection._receive(Datagram(data, address, port));
 
@@ -75,9 +76,9 @@ int _retrievePskInfo(
   Pointer<dtls_context_t> context,
   Pointer<session_t> session,
   int type,
-  Pointer<Uint8> id,
+  Pointer<UnsignedChar> id,
   int idLen,
-  Pointer<Uint8> result,
+  Pointer<UnsignedChar> result,
   int resultLength,
 ) {
   if (type == dtls_credentials_type_t.DTLS_PSK_IDENTITY) {
@@ -101,17 +102,18 @@ int _retrievePskInfo(
     final port = portFromSession(session);
 
     final pskIdentityHint = pskIdentityHintCallback(address, port);
-    result.asTypedList(resultLength).setAll(0, pskIdentityHint);
+    result.cast<Uint8>().asTypedList(resultLength).setAll(0, pskIdentityHint);
     return pskIdentityHint.lengthInBytes;
   }
 
-  final psk = server._pskKeyStoreCallback?.call(id.asTypedList(idLen));
+  final psk =
+      server._pskKeyStoreCallback?.call(id.cast<Uint8>().asTypedList(idLen));
 
   if (psk != null) {
     if (resultLength < psk.length) {
       return createFatalError(dtls_alert_t.DTLS_ALERT_INTERNAL_ERROR);
     }
-    result.asTypedList(resultLength).setAll(0, psk);
+    result.cast<Uint8>().asTypedList(resultLength).setAll(0, psk);
     return psk.lengthInBytes;
   }
 
@@ -133,8 +135,12 @@ int _retrieveEcdsaInfo(Pointer<dtls_context_t> context,
   return success;
 }
 
-int _verifyEcdsaKey(Pointer<dtls_context_t> context, Pointer<session_t> session,
-    Pointer<Uint8> publicKeyX, Pointer<Uint8> publicKeyY, int keySize) {
+int _verifyEcdsaKey(
+    Pointer<dtls_context_t> context,
+    Pointer<session_t> session,
+    Pointer<UnsignedChar> publicKeyX,
+    Pointer<UnsignedChar> publicKeyY,
+    int keySize) {
   return success;
 }
 
@@ -286,8 +292,8 @@ class DtlsServer extends Stream<DtlsServerConnection> {
             _connectionStream.add(connection);
           }
 
-          _tinyDtls.dtls_handle_message(
-              _context, session, buffer, data.data.length);
+          _tinyDtls.dtls_handle_message(_context, session,
+              Pointer.fromAddress(buffer.address), data.data.length);
         }
       }
     });
@@ -296,7 +302,8 @@ class DtlsServer extends Stream<DtlsServerConnection> {
   int _send(List<int> data, Pointer<dtls_context_t> context,
       Pointer<session_t> session) {
     buffer.asTypedList(data.length).setAll(0, data);
-    final result = _tinyDtls.dtls_write(context, session, buffer, data.length);
+    final result =
+        _tinyDtls.dtls_write(context, session, buffer.cast(), data.length);
 
     if (result < 0) {
       throw DtlsException("Error sending DTLS message");

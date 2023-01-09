@@ -23,8 +23,9 @@ import 'types.dart';
 import 'util.dart';
 
 int _handleWrite(Pointer<dtls_context_t> context, Pointer<session_t> session,
-    Pointer<ffi.Uint8> dataAddress, int dataLength) {
-  final data = dataAddress.asTypedList(dataLength).buffer.asUint8List();
+    Pointer<ffi.UnsignedChar> dataAddress, int dataLength) {
+  final data =
+      dataAddress.cast<Uint8>().asTypedList(dataLength).buffer.asUint8List();
   final address = addressFromSession(session);
   final port = portFromSession(session);
 
@@ -33,14 +34,14 @@ int _handleWrite(Pointer<dtls_context_t> context, Pointer<session_t> session,
 }
 
 int _handleRead(Pointer<dtls_context_t> context, Pointer<session_t> session,
-    Pointer<ffi.Uint8> dataAddress, int dataLength) {
+    Pointer<ffi.UnsignedChar> dataAddress, int dataLength) {
   final connection = DtlsClientConnection._connections[context.address];
 
   if (connection == null) {
     return errorCode;
   }
 
-  final data = dataAddress.asTypedList(dataLength);
+  final data = dataAddress.cast<Uint8>().asTypedList(dataLength);
   final address = addressFromSession(session);
   final port = portFromSession(session);
 
@@ -67,9 +68,9 @@ int _retrievePskInfo(
   Pointer<dtls_context_t> context,
   Pointer<session_t> session,
   int type,
-  Pointer<ffi.Uint8> id,
+  Pointer<ffi.UnsignedChar> id,
   int idLen,
-  Pointer<ffi.Uint8> result,
+  Pointer<ffi.UnsignedChar> result,
   int resultLength,
 ) {
   final connection = DtlsClientConnection._connections[context.address];
@@ -85,19 +86,19 @@ int _retrievePskInfo(
     throw StateError("Expected a defined pskCallback.");
   }
 
-  final idBytes = id.asTypedList(idLen);
+  final idBytes = id.cast<Uint8>().asTypedList(idLen);
 
   switch (type) {
     case dtls_credentials_type_t.DTLS_PSK_IDENTITY:
       final pskCredentials = pskCallback(idBytes);
-      final _identity = pskCredentials.identity;
+      final identity = pskCredentials.identity;
 
-      if (resultLength < _identity.length) {
+      if (resultLength < identity.length) {
         return createFatalError(dtls_alert_t.DTLS_ALERT_INTERNAL_ERROR);
       }
 
-      final identityBytes = _identity;
-      result.asTypedList(resultLength).setAll(0, identityBytes);
+      final identityBytes = identity;
+      result.cast<Uint8>().asTypedList(resultLength).setAll(0, identityBytes);
       connection._pskCredentials = pskCredentials;
       return identityBytes.lengthInBytes;
     case dtls_credentials_type_t.DTLS_PSK_KEY:
@@ -111,7 +112,7 @@ int _retrievePskInfo(
           return createFatalError(dtls_alert_t.DTLS_ALERT_ILLEGAL_PARAMETER);
         }
 
-        result.asTypedList(resultLength).setAll(0, psk);
+        result.cast<Uint8>().asTypedList(resultLength).setAll(0, psk);
         return psk.lengthInBytes;
       }
     case dtls_credentials_type_t.DTLS_PSK_HINT:
@@ -140,8 +141,8 @@ int _retrieveEcdsaInfo(
 int _verifyEcdsaKey(
     ffi.Pointer<dtls_context_t> context,
     ffi.Pointer<session_t> session,
-    ffi.Pointer<ffi.Uint8> publicKeyX,
-    ffi.Pointer<ffi.Uint8> publicKeyY,
+    ffi.Pointer<ffi.UnsignedChar> publicKeyX,
+    ffi.Pointer<ffi.UnsignedChar> publicKeyY,
     int keySize) {
   return success;
 }
@@ -371,7 +372,8 @@ class DtlsClient {
   int _send(List<int> data, Pointer<dtls_context_t> context,
       Pointer<session_t> session) {
     buffer.asTypedList(data.length).setAll(0, data);
-    final result = _tinyDtls.dtls_write(context, session, buffer, data.length);
+    final result =
+        _tinyDtls.dtls_write(context, session, buffer.cast(), data.length);
 
     if (result < 0) {
       throw DtlsException("Error sending DTLS message");
@@ -383,7 +385,7 @@ class DtlsClient {
   void _receive(Uint8List data, Pointer<dtls_context_t> context,
       Pointer<session_t> session) {
     buffer.asTypedList(data.length).setAll(0, data);
-    _tinyDtls.dtls_handle_message(context, session, buffer, data.length);
+    _tinyDtls.dtls_handle_message(context, session, buffer.cast(), data.length);
   }
 
   /// Closes this [DtlsClient].
